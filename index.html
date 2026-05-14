@@ -765,7 +765,7 @@
         lastXRFrameTime = 0;
         vrMenu.visible = true;
         updateVRMenu();
-        setStatus('VR-läge startat. Vänster spak flyttar, höger spak vrider, trigger väljer, grip centrerar.');
+        setStatus('VR-läge startat. Vänster spak flyttar, höger spak vrider. Vänster trigger går in/teleporterar, höger trigger väljer, grip greppar modellen i bordsläge.');
         updateDiagnosticsPanel(true);
       });
       renderer.xr.addEventListener('sessionend', () => {
@@ -2906,7 +2906,7 @@
       });
       addVRMenuButton('teleport', 0, -0.05, () => {
         setTableMode(false, true);
-        setStatus('1:1 aktivt. Sikta med vänster hand och tryck trigger för teleport.');
+        setStatus('1:1 aktivt. Sikta med vänster hand och tryck trigger för teleport eller flyg.');
       });
       addVRMenuButton('center', 0, -0.3, () => {
         frameModel();
@@ -2945,7 +2945,7 @@
     function createVRMenuTexture(action) {
       const labels = {
         mode: tableMode ? 'Byt till 1:1' : 'Byt till bord',
-        teleport: 'Teleport',
+        teleport: tableMode ? 'Gå in' : 'Teleport',
         center: 'Centrera',
         fly: vrFlyMode ? 'Flyg på' : 'Flyg av',
         info: 'Info'
@@ -3021,7 +3021,9 @@
       const mode = tableMode ? 'Bord' : '1:1';
       const batches = performanceBatches.filter((mesh) => mesh.visible).length;
       const travel = vrFlyMode ? 'Flyg' : 'Landning';
-      return `VR info: ${mode}, ${travel}. Vänster trigger landar på plan eller flyger. Höger trigger meny/val. Batchar: ${batches}.`;
+      const grip = tableMode ? 'Grip flyttar modellen' : 'Grip vilande';
+      const trigger = tableMode ? 'Vänster trigger går till pekad plats' : 'Vänster trigger teleporterar';
+      return `VR info: ${mode}, ${travel}. ${trigger}. ${grip}. Höger trigger meny/val. Batchar: ${batches}.`;
     }
 
     function updateXRNavigation(time = 0) {
@@ -3197,7 +3199,7 @@
         startTableGrab(controller);
         return;
       }
-      setStatus('Centrering finns på VR-tavlan. Grip är reserverad för modellgrepp i bordsläge.');
+      setStatus('Grip används för bordsmodellen. Använd vänster trigger, spak eller flyg i 1:1.');
     }
 
     function handleControllerSqueezeEnd(controller) {
@@ -3235,10 +3237,10 @@
           root.localToWorld(target);
           teleportCameraTo(target);
           pendingOneToOneEntry = null;
-          setStatus('1:1-läge aktivt. Teleporterad till pekad plats från bordsläge.');
+          setStatus('1:1 aktivt i verklig skala. Du står vid den punkt du pekade på från bordsläge.');
           return;
         }
-        setStatus('1:1-läge aktivt. Modellen står framför dig; gå, flyg eller sikta och teleportera in.');
+        setStatus('1:1 aktivt i verklig skala. Modellen står framför dig; gå, flyg eller sikta och teleportera in.');
         return;
       }
       const target = vrFlyMode ? computeFlyTarget(controller, xrTeleportPoint) : computeTeleportTarget(controller, xrTeleportPoint, true);
