@@ -766,7 +766,10 @@
       vertexCount: 0,
       sourceDrawObjects: new Set(),
       sourceElements: 0,
-      sourceGeometrySources: new Set()
+      sourceGeometrySources: new Set(),
+      sourceTypes: new Set(),
+      sourceDisciplines: new Set(),
+      sourceHasSpaces: false
     };
   }
 
@@ -798,6 +801,9 @@
     builder.sourceElements++;
     builder.sourceDrawObjects.add(renderDrawObjectKey(element));
     builder.sourceGeometrySources.add(element.properties?.GeometrySource || 'unknown');
+    builder.sourceTypes.add(element.type || element.properties?.IfcType || 'unknown');
+    builder.sourceDisciplines.add(element.properties?.Discipline || disciplineForIfcType(element.type || element.properties?.IfcType));
+    if (isSpaceElement(element)) builder.sourceHasSpaces = true;
   }
 
   function finalizeRenderBatch(builder) {
@@ -812,7 +818,10 @@
         role: 'detail-mesh-performance-batch',
         drawObjects: builder.sourceDrawObjects.size,
         elements: builder.sourceElements,
-        geometrySources: uniqueSorted([...builder.sourceGeometrySources])
+        geometrySources: uniqueSorted([...builder.sourceGeometrySources]),
+        types: uniqueSorted([...builder.sourceTypes]),
+        disciplines: uniqueSorted([...builder.sourceDisciplines]),
+        hasSpaces: builder.sourceHasSpaces
       }
     };
   }

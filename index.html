@@ -1916,7 +1916,7 @@
         if (showSpace && performanceProxiedMesh && showModel && showType && showDiscipline && showSystem && showRuntime) performanceProxied++;
       }
       for (const batch of performanceBatches) {
-        batch.visible = performanceOverview;
+        batch.visible = performanceOverview && (showSpaces || !batchContainsSpaces(batch));
         if (batch.visible) visible++;
       }
       if (performanceOverview && deferredDetailDrawableCount) {
@@ -2009,6 +2009,13 @@
         || data?.discipline === 'space'
         || data?.finishClass === 'space'
         || data?.materialRole === 'space';
+    }
+
+    function batchContainsSpaces(batch) {
+      const source = batch?.userData?.vrifc?.source || {};
+      if (source.hasSpaces) return true;
+      return (source.types || []).some((type) => String(type).toUpperCase() === 'IFCSPACE')
+        || (source.disciplines || []).some((discipline) => discipline === 'space');
     }
 
     function filteredBoxProfile(objects) {
