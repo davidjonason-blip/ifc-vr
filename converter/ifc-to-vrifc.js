@@ -693,7 +693,7 @@
     const materialMap = new Map((materials || []).map((material) => [material.id, material]));
     const detailed = elements.filter((element) => {
       const geometry = geometryMap.get(element.geometry);
-      return geometry?.kind === 'mesh' && isDetailedMeshElement(element);
+      return geometry?.kind === 'mesh' && !isSpaceElement(element) && isDetailedMeshElement(element);
     });
     const drawObjectKeys = new Set(detailed.map(renderDrawObjectKey));
     if (drawObjectKeys.size < threshold) return [];
@@ -726,6 +726,11 @@
     if (runtimeClass === 'surface-mesh') return true;
     if (runtimeClass) return false;
     return String(element.properties?.GeometrySource || '').includes('-mesh');
+  }
+
+  function isSpaceElement(element) {
+    return String(element.type || element.properties?.IfcType || '').toUpperCase() === 'IFCSPACE'
+      || element.properties?.Discipline === 'space';
   }
 
   function renderDrawObjectKey(element) {

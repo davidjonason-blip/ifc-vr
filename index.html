@@ -1129,7 +1129,7 @@
       deferredDetailMeshCount = 0;
       deferredDetailDrawableCount = 0;
       for (const group of allGroups) {
-        if (deferDetailMeshes && isDetailedMeshGroup(group)) {
+        if (deferDetailMeshes && isDetailedMeshGroup(group) && !isSpaceGroup(group)) {
           deferredDetailMeshCount += group.items.length;
           deferredDetailDrawableCount++;
           continue;
@@ -1591,6 +1591,13 @@
       return String(group.geometrySource || '').includes('-mesh');
     }
 
+    function isSpaceGroup(group) {
+      return String(group?.type || '').toUpperCase() === 'IFCSPACE'
+        || group?.discipline === 'space'
+        || currentMaterialDefs.get(group?.material)?.finishClass === 'space'
+        || currentMaterialDefs.get(group?.material)?.materialRole === 'space';
+    }
+
     function elementModel(element) {
       return element.properties?.Model || element.source?.model || element.sourceModel || 'Modell';
     }
@@ -1888,7 +1895,7 @@
       let visible = 0;
       let contextVisible = 0;
       let performanceProxied = 0;
-      const performanceOverview = showSpaces && isPerformanceOverviewMode(modelValue, typeValue, disciplineValue, systemValue, runtimeValue);
+      const performanceOverview = isPerformanceOverviewMode(modelValue, typeValue, disciplineValue, systemValue, runtimeValue);
       const showContext = shouldShowNodeContext(typeValue, runtimeValue);
       const contextSystem = systemValue === 'all' ? systemClassForTypeFilter(typeValue) : systemValue;
       for (const mesh of drawables) {
@@ -1944,7 +1951,8 @@
       if (!currentDoc || !hasActiveFilters()) return;
 
       const visibleObjects = drawables.filter((mesh) => mesh.visible);
-      const geometryBox = boxFromVisibleDrawables(visibleObjects);
+      const visibleBatches = performanceBatches.filter((mesh) => mesh.visible);
+      const geometryBox = boxFromVisibleDrawables([...visibleObjects, ...visibleBatches]);
       const profile = filteredBoxProfile(visibleObjects);
       const robustBox = robustBoxFromVisibleGeometryCenters(visibleObjects, profile.low, profile.high, profile.pad);
       const useRobustBox = robustBox && !robustBox.isEmpty() && profile.preferRobust
@@ -2564,8 +2572,7 @@
       if (!tableMode) {
         const center = viewAnchorPoint() || viewBox.getCenter(new THREE.Vector3());
         const groundY = modelGroundY(viewBox);
-        const spawnDistance = 5.5;
-        root.position.set(-center.x, -groundY, -viewBox.max.z - spawnDistance);
+        placeOneToOneModel(viewBox, center, groundY);
         root.updateMatrixWorld(true);
         return;
       }
@@ -2585,6 +2592,44 @@
       if (Number.isFinite(minY)) return minY;
       if (modelBox && !modelBox.isEmpty()) return modelBox.min.y;
       return viewBox && !viewBox.isEmpty() ? viewBox.min.y : 0;
+    }
+
+    function placeOneToOneModel(viewBox, center, groundY) {
+      const spawnDistance = 5.5;
+      const head = new THREE.Vector3(0, XR_EYE_HEIGHT, 0);
+      const forward = new THREE.Vector3(0, 0, -1);
+      if (renderer.xr.isPresenting) {
+        camera.getWorldPosition(head);
+        camera.getWorldDirection(forward);
+        forward.y = 0;
+        if (forward.lengthSq() < 1e-6) forward.set(0, 0, -1);
+        forward.normalize();
+      }
+      const right = forward.clone().cross(xrYawAxis).normalize();
+      const projection = horizontalBoxProjection(viewBox, forward);
+      const targetForward = head.dot(forward) + spawnDistance - projection.min;
+      const targetRight = head.dot(right) - center.dot(right);
+      const det = right.x * forward.z - right.z * forward.x;
+      if (Math.abs(det) < 1e-6) {
+        root.position.set(-center.x, -groundY, -viewBox.max.z - spawnDistance);
+        return;
+      }
+      const x = (targetRight * forward.z - right.z * targetForward) / det;
+      const z = (right.x * targetForward - targetRight * forward.x) / det;
+      root.position.set(x, -groundY, z);
+    }
+
+    function horizontalBoxProjection(box, axis) {
+      let min = Infinity;
+      let max = -Infinity;
+      for (const x of [box.min.x, box.max.x]) {
+        for (const z of [box.min.z, box.max.z]) {
+          const value = x * axis.x + z * axis.z;
+          min = Math.min(min, value);
+          max = Math.max(max, value);
+        }
+      }
+      return { min, max };
     }
 
     function viewAnchorPoint() {
