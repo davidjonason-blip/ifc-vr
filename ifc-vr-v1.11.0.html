@@ -226,9 +226,11 @@ let UNIT_SCALE = 0.001;
 const loadedFiles = [];
 let nextFileId = 1;
 
-// Player rig — XR camera + controllers live here; move rig, never the model
+// Player rig — camera + controllers live here; move rig, never the model
+// NOTE: we parent the regular PerspectiveCamera (not the XR ArrayCamera) to the rig.
+// Three.js r128's updateCamera() reads camera.parent.matrixWorld to offset XR rendering,
+// so the rig transform propagates to both the stereo view and the controllers.
 let playerRig = null;
-let vrRigInitialized = false; // true once XR camera is parented to rig
 
 // Controllers & hands
 let controllers = [];
@@ -361,14 +363,6 @@ function onXRFrame(time, frame) {
 
   if (!frame) return; // not in XR yet
 
-  // On the first XR frame, parent the XR camera to the player rig so that
-  // playerRig.position/rotation becomes the player's reference frame.
-  if (!vrRigInitialized) {
-    vrRigInitialized = true;
-    const xrCam = renderer.xr.getCamera(camera);
-    if (xrCam.parent !== playerRig) playerRig.add(xrCam);
-  }
-
   updateInfoPanel();
   processControllerInput(frame);
 }
@@ -400,8 +394,13 @@ async function startVR() {
     renderer.xr.setSession(xrSession);
     document.getElementById('ui-overlay').classList.add('hidden');
     document.getElementById('stats-bar').classList.add('visible');
-    vrRigInitialized = false;
     positionPlayerForVR();
+    // Parent the regular camera to the rig.
+    // Three.js r128 updateCamera() reads camera.parent.matrixWorld to offset
+    // both the stereo XR view and controller tracking from the rig position.
+    camera.position.set(0, 0, 0);
+    camera.quaternion.identity();
+    playerRig.add(camera); // camera switches parent from scene → playerRig
     setupControllers();
     buildTeleportMarker();
     buildVRMenu();
@@ -418,10 +417,13 @@ async function startVR() {
 
 function onXREnd() {
   xrSession = null;
-  // Remove XR camera from rig before session tears down
-  const xrCam = renderer.xr.getCamera(camera);
-  if (xrCam.parent === playerRig) playerRig.remove(xrCam);
-  vrRigInitialized = false;
+  // Restore camera to scene root so desktop OrbitControls work normally.
+  if (camera.parent === playerRig) {
+    playerRig.remove(camera);
+    scene.add(camera);
+  }
+  camera.position.set(0, playerHeight, 5);
+  camera.lookAt(0, 0, 0);
   document.getElementById('ui-overlay').classList.remove('hidden');
   document.getElementById('stats-bar').classList.remove('visible');
   cleanupControllers();
@@ -456,10 +458,14 @@ function setupControllers() {
   for (let i = 0; i < 2; i++) {
     const ctrl = renderer.xr.getController(i);
     ctrl.userData.index = i;
+    ctrl.userData.xrSource = null; // filled by 'connected' event
     ctrl.userData.isSelecting = false;
     ctrl.userData.wasTrigger = false;
     ctrl.userData.wasGrip = false;
     ctrl.userData.wasMenu = false;
+    // Bind XR input source so we can match by handedness reliably
+    ctrl.addEventListener('connected',    (e) => { ctrl.userData.xrSource = e.data; });
+    ctrl.addEventListener('disconnected', ()  => { ctrl.userData.xrSource = null; });
 
     // Ray visual
     const rayGeo = new THREE.BufferGeometry().setFromPoints([
@@ -500,7 +506,8 @@ function processControllerInput(frame) {
   for (const source of session.inputSources) {
     if (!source.gamepad) continue;
     const gp = source.gamepad;
-    const ctrl = controllers[source.handedness === 'left' ? 0 : 1];
+    // Match by bound XRInputSource — avoids left/right index ambiguity
+    const ctrl = controllers.find(c => c.userData.xrSource === source);
     if (!ctrl) continue;
 
     const idx = ctrl.userData.index;
