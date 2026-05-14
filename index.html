@@ -2580,13 +2580,15 @@
       if (viewBox.isEmpty()) return;
 
       if (!tableMode) {
-        const center = viewBox.getCenter(new THREE.Vector3());
-        const groundY = modelGroundY(viewBox);
-        placeOneToOneModel(viewBox, center, groundY);
+        placeOneToOneFromTableStart(viewBox);
         root.updateMatrixWorld(true);
         return;
       }
 
+      placeTableModel(viewBox);
+    }
+
+    function placeTableModel(viewBox) {
       const size = viewBox.getSize(new THREE.Vector3());
       const center = viewBox.getCenter(new THREE.Vector3());
       const maxAxis = Math.max(size.x, size.y, size.z, 1);
@@ -2595,6 +2597,28 @@
       root.scale.setScalar(scale);
       root.position.set(-center.x * scale, -viewBox.min.y * scale, -center.z * scale - 2.2);
       root.updateMatrixWorld(true);
+    }
+
+    function placeOneToOneFromTableStart(viewBox) {
+      placeTableModel(viewBox);
+      if (!renderer.xr.isPresenting) return;
+
+      root.updateMatrixWorld(true);
+      const tableBox = viewBox.clone().applyMatrix4(root.matrixWorld);
+      if (tableBox.isEmpty()) return;
+
+      camera.getWorldPosition(tableGrabHead);
+      camera.getWorldDirection(tableGrabForward);
+      tableGrabForward.y = 0;
+      if (tableGrabForward.lengthSq() < 1e-6) tableGrabForward.set(0, 0, -1);
+      tableGrabForward.normalize();
+
+      const center = tableBox.getCenter(new THREE.Vector3());
+      const size = tableBox.getSize(new THREE.Vector3());
+      const distance = THREE.MathUtils.clamp(Math.max(size.x, size.z) * 0.5 + 1.2, 2.4, 6.0);
+      const target = tableGrabHead.clone().addScaledVector(tableGrabForward, distance);
+      target.y = center.y;
+      root.position.add(target.sub(center));
     }
 
     function modelGroundY(viewBox = null) {
@@ -3209,8 +3233,15 @@
 
     function teleportFromController(controller) {
       if (tableMode) {
+        const hits = controllerHits(controller, selectableObjects());
+        const hit = hits.find((item) => item.point);
         setTableMode(false, true);
-        setStatus('1:1-läge aktivt. Sikta mot golv/modell och tryck vänster trigger igen för teleport.');
+        if (hit?.point) {
+          teleportCameraTo(hit.point);
+          setStatus('1:1-läge aktivt. Teleporterad till pekad plats från bordsläge.');
+          return;
+        }
+        setStatus('1:1-läge aktivt. Modellen står framför dig; gå, flyg eller sikta och teleportera in.');
         return;
       }
       const target = vrFlyMode ? computeFlyTarget(controller, xrTeleportPoint) : computeTeleportTarget(controller, xrTeleportPoint, true);
