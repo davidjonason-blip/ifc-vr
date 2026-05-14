@@ -613,10 +613,19 @@
     const vrMenu = new THREE.Group();
     vrMenu.name = 'VRIFC_VR_MENU';
     vrMenu.visible = false;
+    const vrTeleportMarker = new THREE.Mesh(
+      new THREE.RingGeometry(0.18, 0.26, 36),
+      new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.8, side: THREE.DoubleSide })
+    );
+    vrTeleportMarker.name = 'VRIFC_TELEPORT_MARKER';
+    vrTeleportMarker.rotation.x = -Math.PI / 2;
+    vrTeleportMarker.visible = false;
+    scene.add(vrTeleportMarker);
     const xrForward = new THREE.Vector3();
     const xrRight = new THREE.Vector3();
     const xrMove = new THREE.Vector3();
     const xrHead = new THREE.Vector3();
+    const xrTemp = new THREE.Vector3();
     const xrYawAxis = new THREE.Vector3(0, 1, 0);
     const xrTeleportPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const xrTeleportPoint = new THREE.Vector3();
@@ -639,6 +648,8 @@
     let renderFrameCount = 0;
     let lastDiagnosticUpdate = 0;
     let lastXRFrameTime = 0;
+    let vrInfoPanel = null;
+    let lastVRInfoText = '';
     let xrState = 'inte startad';
 
     initControllers();
@@ -650,6 +661,7 @@
     renderer.setAnimationLoop((time) => {
       renderFrameCount++;
       updateXRNavigation(time);
+      updateTeleportMarker();
       updateControllerRays();
       renderer.render(scene, camera);
       updateDiagnosticsPanel();
@@ -2780,25 +2792,32 @@
       vrMenu.scale.setScalar(0.32);
 
       const panel = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.35, 1.08),
+        new THREE.PlaneGeometry(1.45, 1.42),
         new THREE.MeshBasicMaterial({ color: 0x0f172a, transparent: true, opacity: 0.86, side: THREE.DoubleSide })
       );
       panel.position.set(0, 0, -0.012);
       vrMenu.add(panel);
 
-      addVRMenuButton('mode', 0, 0.31, () => {
+      vrInfoPanel = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.24, 0.32),
+        new THREE.MeshBasicMaterial({ map: createVRInfoTexture('VR-IFC redo'), transparent: true, side: THREE.DoubleSide })
+      );
+      vrInfoPanel.position.set(0, 0.48, 0.002);
+      vrMenu.add(vrInfoPanel);
+
+      addVRMenuButton('mode', 0, 0.2, () => {
         setTableMode(!tableMode, true);
         setStatus(tableMode ? 'VR-meny: bordsläge.' : 'VR-meny: 1:1-läge.');
       });
-      addVRMenuButton('teleport', 0, 0.06, () => {
+      addVRMenuButton('teleport', 0, -0.05, () => {
         setTableMode(false, true);
         setStatus('1:1 aktivt. Sikta med vänster hand och tryck trigger för teleport.');
       });
-      addVRMenuButton('center', 0, -0.19, () => {
+      addVRMenuButton('center', 0, -0.3, () => {
         frameModel();
         setStatus('VR-vy centrerad.');
       });
-      addVRMenuButton('info', 0, -0.44, () => {
+      addVRMenuButton('info', 0, -0.55, () => {
         setStatus(vrInfoText());
       });
       updateVRMenu();
@@ -2849,10 +2868,58 @@
       return texture;
     }
 
+    function createVRInfoTexture(text) {
+      const canvas2d = document.createElement('canvas');
+      canvas2d.width = 768;
+      canvas2d.height = 192;
+      const ctx = canvas2d.getContext('2d');
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, canvas2d.width, canvas2d.height);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(3, 3, canvas2d.width - 6, canvas2d.height - 6);
+      ctx.fillStyle = '#dbeafe';
+      ctx.font = '700 34px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      wrapCanvasText(ctx, text, 28, 22, canvas2d.width - 56, 42, 3);
+      const texture = new THREE.CanvasTexture(canvas2d);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+      const words = String(text || '').split(/\s+/);
+      let line = '';
+      let lines = 0;
+      for (const word of words) {
+        const test = line ? `${line} ${word}` : word;
+        if (ctx.measureText(test).width > maxWidth && line) {
+          ctx.fillText(line, x, y + lines * lineHeight);
+          line = word;
+          lines++;
+          if (lines >= maxLines) return;
+        } else {
+          line = test;
+        }
+      }
+      if (line && lines < maxLines) ctx.fillText(line, x, y + lines * lineHeight);
+    }
+
+    function updateVRInfoPanel(text) {
+      if (!vrInfoPanel) return;
+      const value = String(text || '').slice(0, 180);
+      if (value === lastVRInfoText) return;
+      lastVRInfoText = value;
+      vrInfoPanel.material.map?.dispose?.();
+      vrInfoPanel.material.map = createVRInfoTexture(value);
+      vrInfoPanel.material.needsUpdate = true;
+    }
+
     function vrInfoText() {
       const mode = tableMode ? 'Bord' : '1:1';
       const batches = performanceBatches.filter((mesh) => mesh.visible).length;
-      return `VR info: ${mode}. Vänster spak flyttar, vänster trigger teleporterar, höger trigger väljer. Batchar: ${batches}.`;
+      return `VR info: ${mode}. Vänster spak flyttar. Vänster trigger teleporterar. Höger trigger klickar meny/val. Batchar: ${batches}.`;
     }
 
     function updateXRNavigation(time = 0) {
@@ -2930,6 +2997,27 @@
       }
     }
 
+    function updateTeleportMarker() {
+      if (!renderer.xr.isPresenting || tableMode) {
+        vrTeleportMarker.visible = false;
+        return;
+      }
+      const controller = leftController();
+      if (!controller || !computeTeleportTarget(controller, xrTeleportPoint)) {
+        vrTeleportMarker.visible = false;
+        return;
+      }
+      vrTeleportMarker.position.copy(xrTeleportPoint);
+      vrTeleportMarker.position.y += 0.012;
+      vrTeleportMarker.visible = true;
+    }
+
+    function leftController() {
+      return controllerRays.find((item) => item.controller.userData.inputSource?.handedness === 'left')?.controller
+        || controllerRays[0]?.controller
+        || null;
+    }
+
     function handleControllerSelect(controller) {
       const handedness = controller.userData.inputSource?.handedness || '';
       const isLeft = handedness === 'left' || (!handedness && controller.userData.index === 0);
@@ -2959,19 +3047,44 @@
         setStatus('1:1-läge aktivt. Sikta mot golv/modell och tryck vänster trigger igen för teleport.');
         return;
       }
-      const modelHit = controllerHits(controller, selectableObjects())[0];
-      if (modelHit?.point) {
-        teleportCameraTo(modelHit.point);
-        setStatus('Teleporterad till träffpunkt.');
-        return;
-      }
-      controllerRay(controller);
-      if (raycaster.ray.intersectPlane(xrTeleportPlane, xrTeleportPoint)) {
+      if (computeTeleportTarget(controller, xrTeleportPoint)) {
         teleportCameraTo(xrTeleportPoint);
         setStatus('Teleporterad.');
         return;
       }
       setStatus('Ingen teleport-träff. Sikta mot golv eller modell.');
+    }
+
+    function computeTeleportTarget(controller, target) {
+      controllerRay(controller);
+      const floorY = xrUserFloorY();
+      xrTeleportPlane.constant = -floorY;
+      if (raycaster.ray.direction.y < -0.05 && raycaster.ray.intersectPlane(xrTeleportPlane, target)) {
+        return constrainTeleportTarget(target);
+      }
+
+      xrTemp.copy(raycaster.ray.direction);
+      xrTemp.y = 0;
+      if (xrTemp.lengthSq() < 1e-6) return false;
+      xrTemp.normalize();
+      target.copy(raycaster.ray.origin).addScaledVector(xrTemp, 2.4);
+      target.y = floorY;
+      return constrainTeleportTarget(target);
+    }
+
+    function xrUserFloorY() {
+      camera.getWorldPosition(xrHead);
+      return xrHead.y - 1.65;
+    }
+
+    function constrainTeleportTarget(target) {
+      const box = currentDoc ? activeViewBox().clone().applyMatrix4(root.matrixWorld) : null;
+      if (box && !box.isEmpty()) {
+        const margin = 1.2;
+        target.x = THREE.MathUtils.clamp(target.x, box.min.x - margin, box.max.x + margin);
+        target.z = THREE.MathUtils.clamp(target.z, box.min.z - margin, box.max.z + margin);
+      }
+      return Number.isFinite(target.x) && Number.isFinite(target.y) && Number.isFinite(target.z);
     }
 
     function teleportCameraTo(point) {
@@ -3306,6 +3419,7 @@
 
     function setStatus(message) {
       statusEl.textContent = message;
+      updateVRInfoPanel(message);
       updateDiagnosticsPanel(true);
     }
 
