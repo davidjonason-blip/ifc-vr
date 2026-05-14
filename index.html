@@ -627,8 +627,10 @@
     const xrHead = new THREE.Vector3();
     const xrTemp = new THREE.Vector3();
     const xrYawAxis = new THREE.Vector3(0, 1, 0);
+    const xrNormalMatrix = new THREE.Matrix3();
     const xrTeleportPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const xrTeleportPoint = new THREE.Vector3();
+    const XR_EYE_HEIGHT = 1.65;
 
     let currentDoc = null;
     let currentRenderDoc = null;
@@ -650,6 +652,7 @@
     let lastXRFrameTime = 0;
     let vrInfoPanel = null;
     let lastVRInfoText = '';
+    let vrFlyMode = false;
     let xrState = 'inte startad';
 
     initControllers();
@@ -2792,7 +2795,7 @@
       vrMenu.scale.setScalar(0.32);
 
       const panel = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.45, 1.42),
+        new THREE.PlaneGeometry(1.45, 1.68),
         new THREE.MeshBasicMaterial({ color: 0x0f172a, transparent: true, opacity: 0.86, side: THREE.DoubleSide })
       );
       panel.position.set(0, 0, -0.012);
@@ -2817,7 +2820,12 @@
         frameModel();
         setStatus('VR-vy centrerad.');
       });
-      addVRMenuButton('info', 0, -0.55, () => {
+      addVRMenuButton('fly', 0, -0.55, () => {
+        vrFlyMode = !vrFlyMode;
+        updateVRMenu();
+        setStatus(vrFlyMode ? 'Flygläge aktivt. Vänster trigger flyttar i 3D längs rayen.' : 'Flygläge av. Vänster trigger landar på golv/plan.');
+      });
+      addVRMenuButton('info', 0, -0.8, () => {
         setStatus(vrInfoText());
       });
       updateVRMenu();
@@ -2847,13 +2855,14 @@
         mode: tableMode ? 'Byt till 1:1' : 'Byt till bord',
         teleport: 'Teleport',
         center: 'Centrera',
+        fly: vrFlyMode ? 'Flyg på' : 'Flyg av',
         info: 'Info'
       };
       const canvas2d = document.createElement('canvas');
       canvas2d.width = 512;
       canvas2d.height = 96;
       const ctx = canvas2d.getContext('2d');
-      ctx.fillStyle = action === 'teleport' ? '#064e3b' : '#111827';
+      ctx.fillStyle = action === 'teleport' || (action === 'fly' && vrFlyMode) ? '#064e3b' : '#111827';
       ctx.fillRect(0, 0, canvas2d.width, canvas2d.height);
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 4;
@@ -2919,7 +2928,8 @@
     function vrInfoText() {
       const mode = tableMode ? 'Bord' : '1:1';
       const batches = performanceBatches.filter((mesh) => mesh.visible).length;
-      return `VR info: ${mode}. Vänster spak flyttar. Vänster trigger teleporterar. Höger trigger klickar meny/val. Batchar: ${batches}.`;
+      const travel = vrFlyMode ? 'Flyg' : 'Landning';
+      return `VR info: ${mode}, ${travel}. Vänster trigger landar på plan eller flyger. Höger trigger meny/val. Batchar: ${batches}.`;
     }
 
     function updateXRNavigation(time = 0) {
@@ -3003,12 +3013,13 @@
         return;
       }
       const controller = leftController();
-      if (!controller || !computeTeleportTarget(controller, xrTeleportPoint)) {
+      const target = controller && (vrFlyMode ? computeFlyTarget(controller, xrTeleportPoint) : computeTeleportTarget(controller, xrTeleportPoint, false));
+      if (!target) {
         vrTeleportMarker.visible = false;
         return;
       }
       vrTeleportMarker.position.copy(xrTeleportPoint);
-      vrTeleportMarker.position.y += 0.012;
+      vrTeleportMarker.position.y += vrFlyMode ? 0 : 0.012;
       vrTeleportMarker.visible = true;
     }
 
@@ -3047,16 +3058,20 @@
         setStatus('1:1-läge aktivt. Sikta mot golv/modell och tryck vänster trigger igen för teleport.');
         return;
       }
-      if (computeTeleportTarget(controller, xrTeleportPoint)) {
-        teleportCameraTo(xrTeleportPoint);
-        setStatus('Teleporterad.');
+      const target = vrFlyMode ? computeFlyTarget(controller, xrTeleportPoint) : computeTeleportTarget(controller, xrTeleportPoint, true);
+      if (target) {
+        teleportCameraTo(xrTeleportPoint, { fly: vrFlyMode });
+        setStatus(vrFlyMode ? 'Flög till ny position.' : 'Teleporterad till plan/golv.');
         return;
       }
-      setStatus('Ingen teleport-träff. Sikta mot golv eller modell.');
+      setStatus(vrFlyMode ? 'Ingen flygträff. Sikta i den riktning du vill flyga.' : 'Ingen teleport-träff. Sikta mot golv eller modell.');
     }
 
-    function computeTeleportTarget(controller, target) {
+    function computeTeleportTarget(controller, target, includeModelPlanes = false) {
       controllerRay(controller);
+      if (includeModelPlanes && findHorizontalSurfaceTarget(target)) {
+        return true;
+      }
       const floorY = xrUserFloorY();
       xrTeleportPlane.constant = -floorY;
       if (raycaster.ray.direction.y < -0.05 && raycaster.ray.intersectPlane(xrTeleportPlane, target)) {
@@ -3072,24 +3087,47 @@
       return constrainTeleportTarget(target);
     }
 
+    function computeFlyTarget(controller, target) {
+      controllerRay(controller);
+      target.copy(raycaster.ray.origin).addScaledVector(raycaster.ray.direction, 4.0);
+      return constrainTeleportTarget(target, { includeY: true, margin: 2.4 });
+    }
+
+    function findHorizontalSurfaceTarget(target) {
+      const hits = raycaster.intersectObjects(selectableObjects(), false);
+      for (const hit of hits) {
+        if (!hit.face || !hit.object) continue;
+        const normal = hit.face.normal.clone();
+        xrNormalMatrix.getNormalMatrix(hit.object.matrixWorld);
+        normal.applyMatrix3(xrNormalMatrix).normalize();
+        if (normal.y < 0.42) continue;
+        target.copy(hit.point);
+        target.y += 0.04;
+        return constrainTeleportTarget(target, { includeY: true, margin: 1.2 });
+      }
+      return false;
+    }
+
     function xrUserFloorY() {
       camera.getWorldPosition(xrHead);
       return xrHead.y - 1.65;
     }
 
-    function constrainTeleportTarget(target) {
+    function constrainTeleportTarget(target, options = {}) {
       const box = currentDoc ? activeViewBox().clone().applyMatrix4(root.matrixWorld) : null;
       if (box && !box.isEmpty()) {
-        const margin = 1.2;
+        const margin = options.margin ?? 1.2;
         target.x = THREE.MathUtils.clamp(target.x, box.min.x - margin, box.max.x + margin);
         target.z = THREE.MathUtils.clamp(target.z, box.min.z - margin, box.max.z + margin);
+        if (options.includeY) target.y = THREE.MathUtils.clamp(target.y, box.min.y - margin, box.max.y + margin + XR_EYE_HEIGHT);
       }
       return Number.isFinite(target.x) && Number.isFinite(target.y) && Number.isFinite(target.z);
     }
 
-    function teleportCameraTo(point) {
+    function teleportCameraTo(point, options = {}) {
       camera.getWorldPosition(xrHead);
-      const delta = new THREE.Vector3(point.x - xrHead.x, 0, point.z - xrHead.z);
+      const targetEyeY = options.fly ? point.y : point.y + XR_EYE_HEIGHT;
+      const delta = new THREE.Vector3(point.x - xrHead.x, targetEyeY - xrHead.y, point.z - xrHead.z);
       cameraRig.position.add(delta);
     }
 
