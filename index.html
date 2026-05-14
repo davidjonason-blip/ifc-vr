@@ -609,11 +609,17 @@
     const drawables = [];
     const performanceBatches = [];
     const controllerRays = [];
+    const vrMenuButtons = [];
+    const vrMenu = new THREE.Group();
+    vrMenu.name = 'VRIFC_VR_MENU';
+    vrMenu.visible = false;
     const xrForward = new THREE.Vector3();
     const xrRight = new THREE.Vector3();
     const xrMove = new THREE.Vector3();
     const xrHead = new THREE.Vector3();
     const xrYawAxis = new THREE.Vector3(0, 1, 0);
+    const xrTeleportPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const xrTeleportPoint = new THREE.Vector3();
 
     let currentDoc = null;
     let currentRenderDoc = null;
@@ -655,7 +661,7 @@
       for (let i = 0; i < 2; i++) {
         const controller = renderer.xr.getController(i);
         controller.userData.index = i;
-        controller.addEventListener('selectstart', () => selectFromController(controller));
+        controller.addEventListener('selectstart', () => handleControllerSelect(controller));
         controller.addEventListener('squeezestart', () => {
           frameModel();
           setStatus('VR-vy centrerad.');
@@ -667,7 +673,7 @@
         controller.addEventListener('disconnected', () => {
           controller.userData.inputSource = null;
         });
-        scene.add(controller);
+        cameraRig.add(controller);
 
         const lineGeo = new THREE.BufferGeometry().setFromPoints([
           new THREE.Vector3(0, 0, 0),
@@ -682,8 +688,10 @@
 
         const grip = renderer.xr.getControllerGrip(i);
         grip.add(controllerModelFactory.createControllerModel(grip));
-        scene.add(grip);
+        cameraRig.add(grip);
       }
+      buildVRMenu();
+      controllerRays[0]?.controller.add(vrMenu);
     }
 
     function bindDom() {
@@ -735,11 +743,14 @@
       renderer.xr.addEventListener('sessionstart', () => {
         xrState = 'XR-session aktiv';
         lastXRFrameTime = 0;
+        vrMenu.visible = true;
+        updateVRMenu();
         setStatus('VR-läge startat. Vänster spak flyttar, höger spak vrider, trigger väljer, grip centrerar.');
         updateDiagnosticsPanel(true);
       });
       renderer.xr.addEventListener('sessionend', () => {
         xrState = 'XR-session avslutad';
+        vrMenu.visible = false;
         setStatus('VR-läge avslutat.');
         updateDiagnosticsPanel(true);
       });
@@ -1173,6 +1184,7 @@
       updateProps();
       updateVisualButton();
       updatePerformanceButton();
+      updateVRMenu();
       const visualInfo = currentRenderDoc.renderLabel ? ` Visning: ${currentRenderDoc.renderLabel}.` : '';
       const performanceInfo = performanceMode ? ' Prestandaläge aktiverat för stor helmodell.' : '';
       const deferredInfo = deferredDetailMeshCount ? ` Detaljmesh skjuts upp: ${deferredDetailMeshCount} element visas via ${performanceBatches.length} renderbatchar, ${builtGeometryCount} geometrier byggda.` : '';
@@ -2658,14 +2670,19 @@
     }
 
     function toggleMode() {
-      tableMode = !tableMode;
+      setTableMode(!tableMode, true);
+    }
+
+    function setTableMode(enabled, announce = false) {
+      tableMode = Boolean(enabled);
       modeButton.textContent = tableMode ? 'Bordsläge' : '1:1';
       modeButton.classList.toggle('active', !tableMode);
       applyTableMode();
       updateStageFrame();
       frameModel();
       updateProps();
-      setStatus(tableMode ? 'Bordsläge aktivt.' : '1:1-läge aktivt.');
+      updateVRMenu();
+      if (announce) setStatus(tableMode ? 'Bordsläge aktivt.' : '1:1-läge aktivt.');
     }
 
     function toggleVisualMode() {
@@ -2757,6 +2774,87 @@
       orbitTarget.add(move);
     }
 
+    function buildVRMenu() {
+      vrMenu.position.set(0.02, 0.08, -0.24);
+      vrMenu.rotation.set(-0.35, 0, 0);
+      vrMenu.scale.setScalar(0.32);
+
+      const panel = new THREE.Mesh(
+        new THREE.PlaneGeometry(1.35, 1.08),
+        new THREE.MeshBasicMaterial({ color: 0x0f172a, transparent: true, opacity: 0.86, side: THREE.DoubleSide })
+      );
+      panel.position.set(0, 0, -0.012);
+      vrMenu.add(panel);
+
+      addVRMenuButton('mode', 0, 0.31, () => {
+        setTableMode(!tableMode, true);
+        setStatus(tableMode ? 'VR-meny: bordsläge.' : 'VR-meny: 1:1-läge.');
+      });
+      addVRMenuButton('teleport', 0, 0.06, () => {
+        setTableMode(false, true);
+        setStatus('1:1 aktivt. Sikta med vänster hand och tryck trigger för teleport.');
+      });
+      addVRMenuButton('center', 0, -0.19, () => {
+        frameModel();
+        setStatus('VR-vy centrerad.');
+      });
+      addVRMenuButton('info', 0, -0.44, () => {
+        setStatus(vrInfoText());
+      });
+      updateVRMenu();
+    }
+
+    function addVRMenuButton(action, x, y, onClick) {
+      const geometry = new THREE.PlaneGeometry(1.12, 0.18);
+      const material = new THREE.MeshBasicMaterial({ map: createVRMenuTexture(action), transparent: true, side: THREE.DoubleSide });
+      const button = new THREE.Mesh(geometry, material);
+      button.position.set(x, y, 0);
+      button.userData.vrMenuAction = action;
+      button.userData.onVRMenuClick = onClick;
+      vrMenuButtons.push(button);
+      vrMenu.add(button);
+    }
+
+    function updateVRMenu() {
+      for (const button of vrMenuButtons) {
+        button.material.map?.dispose?.();
+        button.material.map = createVRMenuTexture(button.userData.vrMenuAction);
+        button.material.needsUpdate = true;
+      }
+    }
+
+    function createVRMenuTexture(action) {
+      const labels = {
+        mode: tableMode ? 'Byt till 1:1' : 'Byt till bord',
+        teleport: 'Teleport',
+        center: 'Centrera',
+        info: 'Info'
+      };
+      const canvas2d = document.createElement('canvas');
+      canvas2d.width = 512;
+      canvas2d.height = 96;
+      const ctx = canvas2d.getContext('2d');
+      ctx.fillStyle = action === 'teleport' ? '#064e3b' : '#111827';
+      ctx.fillRect(0, 0, canvas2d.width, canvas2d.height);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(3, 3, canvas2d.width - 6, canvas2d.height - 6);
+      ctx.fillStyle = '#e5edf7';
+      ctx.font = '700 38px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(labels[action] || action, canvas2d.width / 2, canvas2d.height / 2);
+      const texture = new THREE.CanvasTexture(canvas2d);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      return texture;
+    }
+
+    function vrInfoText() {
+      const mode = tableMode ? 'Bord' : '1:1';
+      const batches = performanceBatches.filter((mesh) => mesh.visible).length;
+      return `VR info: ${mode}. Vänster spak flyttar, vänster trigger teleporterar, höger trigger väljer. Batchar: ${batches}.`;
+    }
+
     function updateXRNavigation(time = 0) {
       if (!renderer.xr.isPresenting) {
         lastXRFrameTime = 0;
@@ -2832,11 +2930,66 @@
       }
     }
 
+    function handleControllerSelect(controller) {
+      const handedness = controller.userData.inputSource?.handedness || '';
+      const isLeft = handedness === 'left' || (!handedness && controller.userData.index === 0);
+      if (!isLeft && activateVRMenuFromController(controller)) return;
+      if (isLeft) {
+        teleportFromController(controller);
+        return;
+      }
+      selectFromController(controller);
+    }
+
+    function activateVRMenuFromController(controller) {
+      const hits = controllerHits(controller, vrMenuButtons);
+      const hit = hits.find((item) => item.object?.userData?.onVRMenuClick);
+      if (!hit) return false;
+      hit.object.userData.onVRMenuClick();
+      return true;
+    }
+
     function selectFromController(controller) {
+      selectFromHits(controllerHits(controller, selectableObjects()));
+    }
+
+    function teleportFromController(controller) {
+      if (tableMode) {
+        setTableMode(false, true);
+        setStatus('1:1-läge aktivt. Sikta mot golv/modell och tryck vänster trigger igen för teleport.');
+        return;
+      }
+      const modelHit = controllerHits(controller, selectableObjects())[0];
+      if (modelHit?.point) {
+        teleportCameraTo(modelHit.point);
+        setStatus('Teleporterad till träffpunkt.');
+        return;
+      }
+      controllerRay(controller);
+      if (raycaster.ray.intersectPlane(xrTeleportPlane, xrTeleportPoint)) {
+        teleportCameraTo(xrTeleportPoint);
+        setStatus('Teleporterad.');
+        return;
+      }
+      setStatus('Ingen teleport-träff. Sikta mot golv eller modell.');
+    }
+
+    function teleportCameraTo(point) {
+      camera.getWorldPosition(xrHead);
+      const delta = new THREE.Vector3(point.x - xrHead.x, 0, point.z - xrHead.z);
+      cameraRig.position.add(delta);
+    }
+
+    function controllerHits(controller, objects) {
+      controllerRay(controller);
+      return raycaster.intersectObjects(objects, false);
+    }
+
+    function controllerRay(controller) {
+      controller.updateMatrixWorld(true);
       tempMatrix.identity().extractRotation(controller.matrixWorld);
       raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
       raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-      selectFromHits(raycaster.intersectObjects(selectableObjects(), false));
     }
 
     const tempMatrix = new THREE.Matrix4();
