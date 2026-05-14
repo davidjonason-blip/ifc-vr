@@ -117,3 +117,7 @@ node tools\vr-ifc-quest-browser-sim.js
 The script starts a headless Edge/Chrome session with a Quest Browser-style user agent and tall mobile viewport, then loads the largest available VRIFC packages. It checks load time, payload size, draw-object budget, canvas non-blank rendering, console warnings/errors, WebXR fallback state, and core controls such as IFCSPACE toggle and presets. Outputs are written to `VR-IFC/.scratch/quest-sim/`.
 
 This is a preflight, not a replacement for a real Quest 3 test. Desktop browser automation cannot prove immersive WebXR session support, controller tracking, headset thermal behavior, or real VR framerate.
+
+## Legacy HTML Builds
+
+The previous standalone builds from the original `ifc-vr` repository are preserved in Git history as `ifc-vr-v1.0.0.html` and `ifc-vr-v1.11.0.html`.

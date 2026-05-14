@@ -1,0 +1,2751 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Permissions-Policy" content="xr-spatial-tracking=*"/>
+  <title>IFC VR — v1.11.0</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0a0c12; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+    #ui-overlay {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 20px;
+      background: radial-gradient(ellipse at center, #0d1119 0%, #060810 100%);
+    }
+    #ui-overlay.hidden { display: none; }
+    .logo {
+      font-size: 28px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase;
+      background: linear-gradient(135deg, #3b82f6, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .subtitle { font-size: 13px; color: #64748b; letter-spacing: 2px; text-transform: uppercase; }
+    .drop-zone {
+      width: 340px; padding: 32px 24px; border: 2px dashed #1f2433; border-radius: 16px;
+      display: flex; flex-direction: column; align-items: center; gap: 14px; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #3b82f6; background: rgba(59,130,246,0.06); }
+    .drop-icon { font-size: 36px; }
+    .drop-title { font-size: 16px; font-weight: 600; }
+    .drop-sub { font-size: 12px; color: #64748b; text-align: center; }
+    .drop-btn {
+      padding: 10px 28px; background: #3b82f6; color: #fff; border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+    }
+    .drop-btn:hover { background: #2563eb; }
+    #file-input { display: none; }
+    #vr-btn {
+      display: none; padding: 14px 40px;
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      color: #fff; border: none; border-radius: 12px;
+      font-size: 16px; font-weight: 700; cursor: pointer; letter-spacing: 1px;
+      transition: opacity 0.2s, transform 0.1s; text-transform: uppercase;
+    }
+    #vr-btn:hover { opacity: 0.9; transform: scale(1.02); }
+    #vr-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    #no-vr-msg { display: none; color: #f59e0b; font-size: 13px; text-align: center; max-width: 300px; }
+
+    /* ── LOADING ── */
+    #loading {
+      position: fixed; inset: 0; z-index: 20;
+      display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+      background: rgba(6,8,16,0.96);
+    }
+    .spinner { width: 44px; height: 44px; border: 3px solid #1f2433; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .load-text { font-size: 14px; color: #94a3b8; font-family: monospace; }
+    .load-sub { font-size: 12px; color: #334155; font-family: monospace; min-height: 16px; }
+    #prog-wrap { width: 240px; height: 3px; background: #1f2433; border-radius: 2px; overflow: hidden; }
+    #prog-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #3b82f6, #06b6d4); transition: width 0.3s; }
+
+    /* ── HUD (visible in VR via flat overlay in scene) ── */
+    canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+    /* ── URL LOADER ── */
+    .url-section {
+      width: 340px; display: flex; flex-direction: column; gap: 8px;
+    }
+    .url-label { font-size: 11px; color: #475569; text-align: center; letter-spacing: 1px; text-transform: uppercase; }
+    .url-row { display: flex; gap: 8px; }
+    .url-input {
+      flex: 1; padding: 9px 12px; background: #0d1117; border: 1px solid #1f2433;
+      border-radius: 8px; color: #e2e8f0; font-size: 12px; font-family: monospace;
+      outline: none; transition: border-color 0.2s;
+    }
+    .url-input:focus { border-color: #3b82f6; }
+    .url-btn {
+      padding: 9px 16px; background: #1f2d4a; color: #60a5fa; border: 1px solid #1e3a5f;
+      border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .url-btn:hover { background: #1e3a5f; }
+    .url-status { font-size: 11px; color: #64748b; text-align: center; min-height: 16px; }
+
+    .disc-title { font-size: 11px; font-weight: 700; color: #06b6d4; text-transform: uppercase; letter-spacing: 1px; }
+    .disc-row { display: flex; align-items: center; gap: 10px; }
+    .disc-label { flex: 1; font-size: 13px; }
+    .disc-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; color: #fff; }
+    .disc-toggle {
+      width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer;
+      background: #3b82f6; position: relative; transition: background 0.2s;
+    }
+    .disc-toggle::after {
+      content: ''; position: absolute; width: 14px; height: 14px; background: #fff;
+      border-radius: 50%; top: 3px; left: 3px; transition: transform 0.2s;
+    }
+    .disc-toggle.off { background: #1f2433; }
+    .disc-toggle.off::after { transform: translateX(16px); }
+
+    /* ── STATS / HUD BAR ── */
+    #stats-bar {
+      position: fixed; top: 0; left: 0; right: 0; display: none;
+      font-family: 'Segoe UI', system-ui, sans-serif; font-size: 12px; color: #94a3b8;
+      background: rgba(8,10,18,0.88); backdrop-filter: blur(6px);
+      padding: 8px 16px; z-index: 5;
+      display: none; align-items: center; gap: 12px; flex-wrap: wrap;
+      pointer-events: auto; border-bottom: 1px solid #1f2433;
+    }
+    #stats-bar.visible { display: flex; }
+    #stats-text { flex: 1; font-family: monospace; font-size: 11px; color: #64748b; }
+    .hud-btn {
+      padding: 5px 14px; border-radius: 7px; border: none; cursor: pointer;
+      font-size: 12px; font-weight: 600;
+    }
+    .hud-btn-add { background: #1f2433; color: #94a3b8; }
+    .hud-btn-add:hover { background: #2a3347; }
+    .hud-btn-vr {
+      background: linear-gradient(135deg, #3b82f6, #06b6d4);
+      color: #fff;
+    }
+    .hud-btn-vr:hover { opacity: 0.9; }
+    .hud-btn-vr:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* ── DISC PANEL (floating, post-load) ── */
+    #disc-panel {
+      position: fixed; bottom: 16px; left: 16px; z-index: 5;
+      width: 220px; background: rgba(13,17,26,0.92); backdrop-filter: blur(6px);
+      border: 1px solid #1f2433; border-radius: 12px;
+      padding: 12px 14px; display: none; flex-direction: column; gap: 8px;
+    }
+    #disc-panel.floating { display: flex; }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- UI Overlay (pre-VR) -->
+<div id="ui-overlay">
+  <div class="logo">IFC VR</div>
+  <div class="subtitle">Meta Quest 3 · Byggbranschen · v1.11.0</div>
+
+  <div class="drop-zone" id="drop-zone">
+    <div class="drop-icon">📐</div>
+    <div class="drop-title">Ladda IFC-fil</div>
+    <div class="drop-sub">Dra och släpp en eller flera .ifc-filer<br>eller klicka för att välja</div>
+    <button class="drop-btn" onclick="document.getElementById('file-input').click()">Välj IFC-fil(er)</button>
+    <input type="file" id="file-input" accept=".ifc" multiple/>
+  </div>
+
+  <div class="url-section">
+    <div class="url-label">Eller ladda via URL (Quest 3)</div>
+    <div class="url-row">
+      <input type="text" id="url-input" class="url-input"
+        placeholder="http://192.168.x.x:8080/FASTIGHET/A040-V-01000000.ifc"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <button class="url-btn" onclick="loadFromURL()">Ladda</button>
+    </div>
+    <div id="url-status" class="url-status"></div>
+  </div>
+
+</div>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="load-text" id="load-text">Laddar...</div>
+  <div id="prog-wrap"><div id="prog-bar"></div></div>
+  <div class="load-sub" id="load-sub"></div>
+</div>
+
+<!-- HUD bar (post-load, floating over 3D canvas) -->
+<div id="stats-bar">
+  <span id="stats-text">0 filer · 0 mesh</span>
+  <button class="hud-btn hud-btn-add" onclick="document.getElementById('file-input-hud').click()">+ Lägg till fil</button>
+  <input type="file" id="file-input-hud" accept=".ifc" multiple style="display:none"/>
+  <button id="vr-btn" class="hud-btn hud-btn-vr" onclick="startVR()" style="display:none">▶ Starta VR</button>
+  <button class="hud-btn" onclick="runVRDiagnostics()" title="WebXR-diagnostik" style="background:#374151;color:#fbbf24;border:1px solid #fbbf24;padding:6px 10px;border-radius:6px;cursor:pointer;font-size:13px;">🔧</button>
+  <span id="no-vr-msg" style="display:none;color:#f59e0b;font-size:12px;">WebXR ej stöds — öppna i Meta Browser</span>
+</div>
+
+<!-- VR Diagnostics overlay -->
+<div id="diag-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;overflow:auto;padding:24px;">
+  <div style="max-width:700px;margin:0 auto;background:#0f1117;border:1px solid #3b82f6;border-radius:12px;padding:24px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <span style="color:#06b6d4;font-size:20px;font-weight:bold;">🔧 WebXR-diagnostik</span>
+      <button onclick="document.getElementById('diag-overlay').style.display='none'" style="background:#1f2937;color:#fff;border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:16px;">✕ Stäng</button>
+    </div>
+    <pre id="diag-output" style="color:#e2e8f0;font-family:monospace;font-size:13px;line-height:1.7;white-space:pre-wrap;margin:0;">Kör diagnostik...</pre>
+  </div>
+</div>
+
+<!-- Discipline panel (floating bottom-left after load) -->
+<div id="disc-panel">
+  <div class="disc-title">Discipliner (synlighet)</div>
+  <div id="disc-rows"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// IFC VR — v1.11.0
+// v1.11.0: Mätverktyg (A→B distans) + sektionsplan (höjdjusterbart via höger joystick Y)
+// v1.10.0: IFCREVOLVEDAREASOLID + IFCAXIS2PLACEMENT2D — rörböjar och svepta rotationskroppar
+// v1.9.0: CSG-håltagning via IFCRELVOIDSELEMENT — väggar/bjälklag får dörr- och fönsteröppningar
+// v1.8.0: InstancedMesh för IFCMAPPEDITEM — delade geometrier renderas som en draw call per grupp
+// v1.7.0: skala-toggle 1:1 ↔ miniatyr (0.5 m) via VR-menyn; modell placeras framför spelaren i mini-läge
+// v1.6.0: playerRig — kamera+kontroller under en rig-grupp; snap-turn pivoterar runt spelaren (bug 1.3),
+//         locomotion+teleport flyttar riggen (bug 1.3/1.4), initial VR-pose 2.5 m framför modellen (bug 1.5)
+// v1.5.0: updateInfoPanel i frame-loop (bug 1.2), handleVRMenuTrigger vid vänster trigger (bug 1.1),
+//         Återställ modellposition-knapp i VR-menyn, cleanup av VR-objekt vid onXREnd
+// v1.4.0: IFCSHELLBASEDSURFACEMODEL + SurfaceModel repType (V157 ventilation)
+// v1.3.0: IFCCARTESIANTRANSFORMATIONOPERATOR3DNONUNIFORM per-axis scale fix
+// WebXR viewer for Meta Quest 3 — built on IFC parser from ifc-viewer-v2.7.1
+// v1.1.0: MESH_BUDGET 20000 (bort från filstorleksgräns), smooth shading via vertex-dedup,
+//         SEGS rör 6→16, SEGS cirkelprofil 10→16
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── GLOBALS ────────────────────────────────────────────────────────────────
+let scene, camera, renderer, xrSession = null;
+let ifcRoot;          // Group: Z-up→Y-up rotation
+let modelBox = new THREE.Box3();
+let meshMap = {};     // meshKey → THREE.Mesh
+let UNIT_SCALE = 0.001;
+
+// Multi-file state
+const loadedFiles = [];
+let nextFileId = 1;
+
+// Player rig — XR camera + controllers live here; move rig, never the model
+let playerRig = null;
+let vrRigInitialized = false; // true once XR camera is parented to rig
+
+// Controllers & hands
+let controllers = [];
+let controllerGrips = [];
+let tempMatrix = new THREE.Matrix4();
+const raycaster = new THREE.Raycaster();
+
+// Locomotion
+let teleportTarget = null;
+let teleportMarker = null;
+let teleportReady = false;
+let joystickActive = false;
+let playerHeight = 1.65; // metres
+
+// VR UI state
+let vrMenuOpen = false;
+let vrMenuGroup = null;
+let selectedMesh = null, selectedInstanceId = null;
+let infoPanel = null;
+let disciplineVisible = {};
+let scaleMode = 'full'; // 'full' = 1:1 walk-through | 'mini' = 0.5 m miniatyr
+// v1.11.0: Mätverktyg
+let measureMode = false;
+let measureA = null, measureB = null; // THREE.Vector3 i världsrymden
+let measureGroup = null;              // THREE.Group med sfärer, linje, label
+// v1.11.0: Sektionsplan
+let sectionMode = false;
+let sectionHeight = 1.2;             // meter i Three.js Y-up världsrymd
+let sectionPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 1.2); // klipper y > sectionHeight
+
+const DISCIPLINES = {
+  A:    { name: 'Arkitektur',      color: '#94a3b8' },
+  K:    { name: 'Konstruktion',    color: '#a8a29e' },
+  V:    { name: 'Ventilation',     color: '#06b6d4' },
+  VS:   { name: 'Värme & Sanitet', color: '#f97316' },
+  VVS:  { name: 'VVS',             color: '#ef4444' },
+  SPR:  { name: 'Sprinkler',       color: '#dc2626' },
+  KYLA: { name: 'Kyla',            color: '#3b82f6' },
+  VA:   { name: 'Vatten & Avlopp', color: '#0891b2' },
+  EL:   { name: 'El',              color: '#eab308' },
+  '?':  { name: 'Okänd',           color: '#cbd5e1' }
+};
+
+const DISCIPLINE_ALIASES = { W: 'VS' };
+
+function detectDiscipline(filename) {
+  const base = filename.replace(/\.ifc$/i, '').toUpperCase();
+  const m = base.match(/^([A-Z]+)[-_]/);
+  if (m) {
+    const key = DISCIPLINE_ALIASES[m[1]] || m[1];
+    if (DISCIPLINES[key]) return key;
+  }
+  const single = base.match(/^([A-Z]{1,4})/);
+  if (single) {
+    const key = DISCIPLINE_ALIASES[single[1]] || single[1];
+    if (DISCIPLINES[key]) return key;
+  }
+  return '?';
+}
+
+const TYPE_COLORS = {
+  IFCWALL:'#94a3b8', IFCWALLSTANDARDCASE:'#94a3b8', IFCSLAB:'#64748b',
+  IFCROOF:'#475569', IFCDOOR:'#f59e0b', IFCWINDOW:'#38bdf8',
+  IFCCOLUMN:'#a78bfa', IFCBEAM:'#c084fc', IFCSTAIR:'#fb923c',
+  IFCSTAIRFLIGHT:'#f97316', IFCRAMP:'#fdba74', IFCFURNISHINGELEMENT:'#86efac',
+  IFCSPACE:'#63b3ed', IFCFLOWSEGMENT:'#38bdf8', IFCFLOWFITTING:'#7dd3fc',
+  IFCDUCTFITTING:'#7dd3fc', IFCDUCTSEGMENT:'#38bdf8',
+  IFCPIPESEGMENT:'#4ade80', IFCPIPEFITTING:'#86efac',
+  IFCPLATE:'#a8a29e', IFCMEMBER:'#c084fc', IFCCOVERING:'#78716c',
+  IFCBUILDINGELEMENTPROXY:'#6b7280', IFCFLOWTERMINAL:'#06b6d4',
+  IFCSANITARYTERMINAL:'#0ea5e9', IFCFLOWCONTROLLER:'#fb923c',
+  IFCENERGYCONVERSIONDEVICE:'#a78bfa', IFCCURTAINWALL:'#60a5fa',
+  IFCRAILING:'#a1a1aa', IFCLIGHTFIXTURE:'#fde047', IFCFOOTING:'#57534e',
+  DEFAULT:'#cbd5e1'
+};
+
+// ── INIT THREE.JS ───────────────────────────────────────────────────────────
+function initThree() {
+  const canvas = document.getElementById('c');
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x080a0e);
+
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 10000);
+  camera.position.set(0, playerHeight, 5);
+
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.xr.enabled = true;
+  renderer.localClippingEnabled = true; // v1.11.0: needed for per-material section plane
+  renderer.shadowMap.enabled = false; // Performance: no shadows on Quest
+
+  // Lighting — bright for VR readability
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+  sun.position.set(10, 20, 10);
+  scene.add(sun);
+  const fill = new THREE.DirectionalLight(0x8aa8d0, 0.3);
+  fill.position.set(-5, -5, -5);
+  scene.add(fill);
+  scene.add(new THREE.HemisphereLight(0x334466, 0x1a1a2e, 0.4));
+
+  // Floor grid
+  const grid = new THREE.GridHelper(200, 40, 0x1f2433, 0x161a26);
+  scene.add(grid);
+
+  // IFC root: IFC = Z-up, Three.js = Y-up — never moved after model load
+  ifcRoot = new THREE.Group();
+  ifcRoot.rotation.x = -Math.PI / 2;
+  scene.add(ifcRoot);
+
+  // Player rig: camera + controllers live here; locomotion moves this group
+  playerRig = new THREE.Group();
+  playerRig.position.set(0, 0, 10);
+  scene.add(playerRig);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  renderer.setAnimationLoop(onXRFrame);
+  setupOrbit();
+}
+
+// ── XR FRAME LOOP ──────────────────────────────────────────────────────────
+function onXRFrame(time, frame) {
+  renderer.render(scene, camera);
+
+  if (!frame) return; // not in XR yet
+
+  // On the first XR frame, parent the XR camera to the player rig so that
+  // playerRig.position/rotation becomes the player's reference frame.
+  if (!vrRigInitialized) {
+    vrRigInitialized = true;
+    const xrCam = renderer.xr.getCamera(camera);
+    if (xrCam.parent !== playerRig) playerRig.add(xrCam);
+  }
+
+  updateInfoPanel();
+  processControllerInput(frame);
+}
+
+// ── START VR ───────────────────────────────────────────────────────────────
+async function startVR() {
+  if (!navigator.xr) { alert('WebXR ej tillgängligt.'); return; }
+  // content:// and file:// URLs are blocked for immersive-VR on Meta Browser.
+  // The file must be served over HTTPS (GitHub Pages, Netlify, etc.)
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+    alert(
+      'VR kräver HTTPS.\n\n' +
+      'Filen är öppnad som lokal fil (content:// eller file://) vilket Meta Browser ' +
+      'blockerar för VR.\n\n' +
+      'Lösning:\n' +
+      '1. Ladda upp filen till GitHub Pages eller Netlify (gratis)\n' +
+      '2. Öppna den HTTPS-länken i Meta Browser\n\n' +
+      'GitHub Pages: github.com → New repo → Upload file → Settings → Pages → Deploy'
+    );
+    return;
+  }
+  try {
+    // NOTE: Do NOT await isSessionSupported here — it consumes the user gesture on
+    // Meta Browser, causing requestSession to fail regardless of features.
+    xrSession = await navigator.xr.requestSession('immersive-vr', {
+      requiredFeatures: ['local-floor'],
+      optionalFeatures: ['hand-tracking']
+    });
+    renderer.xr.setSession(xrSession);
+    document.getElementById('ui-overlay').classList.add('hidden');
+    document.getElementById('stats-bar').classList.add('visible');
+    vrRigInitialized = false;
+    positionPlayerForVR();
+    setupControllers();
+    buildTeleportMarker();
+    buildVRMenu();
+    xrSession.addEventListener('end', onXREnd);
+  } catch(e) {
+    console.error('XR start error:', e);
+    const isQuest = navigator.userAgent.includes('Quest');
+    const hint = isQuest
+      ? '\n\nQuest-tips: Headsetet måste vara på huvudet när du trycker Starta VR (proximity-sensorn måste registrera ansiktet).'
+      : '';
+    alert('Kunde inte starta VR: ' + e.message + hint);
+  }
+}
+
+function onXREnd() {
+  xrSession = null;
+  // Remove XR camera from rig before session tears down
+  const xrCam = renderer.xr.getCamera(camera);
+  if (xrCam.parent === playerRig) playerRig.remove(xrCam);
+  vrRigInitialized = false;
+  document.getElementById('ui-overlay').classList.remove('hidden');
+  document.getElementById('stats-bar').classList.remove('visible');
+  cleanupControllers();
+  if (teleportMarker) { scene.remove(teleportMarker); teleportMarker = null; }
+  if (vrMenuGroup) { scene.remove(vrMenuGroup); vrMenuGroup = null; vrMenuOpen = false; }
+  if (infoPanel) { scene.remove(infoPanel); infoPanel = null; }
+  clearMeasurement(); measureMode = false;
+  if (sectionMode) { sectionMode = false; applySection(); }
+  selectedMesh = null;
+}
+
+// Place the player rig so the model centre is ~3 m in front at start of session
+function positionPlayerForVR() {
+  renderer.render(scene, camera); // ensure matrixWorld is current
+  const box = computeSceneBox();
+  if (box.isEmpty()) {
+    playerRig.position.set(0, 0, 10);
+    playerRig.rotation.set(0, 0, 0);
+    return;
+  }
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const halfDepth = Math.max(size.x, size.z) * 0.5;
+  playerRig.position.set(center.x, 0, center.z + halfDepth + 2.5);
+  playerRig.rotation.set(0, 0, 0);
+}
+
+// ── CONTROLLERS ─────────────────────────────────────────────────────────────
+function setupControllers() {
+  for (let i = 0; i < 2; i++) {
+    const ctrl = renderer.xr.getController(i);
+    ctrl.userData.index = i;
+    ctrl.userData.isSelecting = false;
+    ctrl.userData.wasTrigger = false;
+    ctrl.userData.wasGrip = false;
+    ctrl.userData.wasMenu = false;
+
+    // Ray visual
+    const rayGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0, 0, -1)
+    ]);
+    const rayMat = new THREE.LineBasicMaterial({ color: 0x06b6d4, linewidth: 1 });
+    const ray = new THREE.Line(rayGeo, rayMat);
+    ray.name = 'ray';
+    ray.scale.z = 5;
+    ctrl.add(ray);
+
+    playerRig.add(ctrl);
+    controllers.push(ctrl);
+
+    // Grip (controller model placeholder)
+    const grip = renderer.xr.getControllerGrip(i);
+    const gripGeo = new THREE.CylinderGeometry(0.015, 0.025, 0.12, 8);
+    const gripMat = new THREE.MeshStandardMaterial({ color: 0x222233 });
+    grip.add(new THREE.Mesh(gripGeo, gripMat));
+    playerRig.add(grip);
+    controllerGrips.push(grip);
+  }
+}
+
+function cleanupControllers() {
+  controllers.forEach(c => playerRig.remove(c));
+  controllerGrips.forEach(g => playerRig.remove(g));
+  controllers = [];
+  controllerGrips = [];
+}
+
+// ── CONTROLLER INPUT ────────────────────────────────────────────────────────
+function processControllerInput(frame) {
+  const session = renderer.xr.getSession();
+  if (!session) return;
+
+  for (const source of session.inputSources) {
+    if (!source.gamepad) continue;
+    const gp = source.gamepad;
+    const ctrl = controllers[source.handedness === 'left' ? 0 : 1];
+    if (!ctrl) continue;
+
+    const idx = ctrl.userData.index;
+    const hand = source.handedness; // 'left' | 'right'
+
+    // Buttons: 0=trigger, 1=grip, 3=thumbstick press, 4=X/A, 5=Y/B
+    const trigger   = gp.buttons[0]?.pressed ?? false;
+    const grip      = gp.buttons[1]?.pressed ?? false;
+    const menuBtn   = gp.buttons[4]?.pressed ?? false; // X (left) / A (right)
+
+    // Axes: 2=thumbstick X, 3=thumbstick Y
+    const axisX = gp.axes[2] ?? 0;
+    const axisY = gp.axes[3] ?? 0;
+
+    // ── RIGHT HAND: Teleport (trigger to aim, release to jump) ──────────
+    if (hand === 'right') {
+      updateTeleportRay(ctrl, trigger);
+
+      if (!trigger && ctrl.userData.wasTrigger && teleportReady) {
+        executeTeleport();
+      }
+
+      // Right joystick Y: adjust section height when section is active
+      if (sectionMode && Math.abs(axisY) > 0.3) {
+        sectionHeight = Math.max(0, Math.min(50, sectionHeight - axisY * 0.02));
+        sectionPlane.constant = sectionHeight;
+        rebuildVRMenuContent();
+      }
+
+      // Right joystick X: snap-turn — rotate playerRig around camera's foot position
+      if (Math.abs(axisX) > 0.7 && !ctrl.userData.snapTurning) {
+        ctrl.userData.snapTurning = true;
+        const angle = axisX > 0 ? -Math.PI / 6 : Math.PI / 6; // 30° snap
+        const xrCam = renderer.xr.getCamera(camera);
+        const camWorld = new THREE.Vector3();
+        xrCam.getWorldPosition(camWorld);
+        const px = camWorld.x, pz = camWorld.z; // pivot at camera XZ
+        const cos = Math.cos(angle), sin = Math.sin(angle);
+        const dx = playerRig.position.x - px;
+        const dz = playerRig.position.z - pz;
+        playerRig.position.x = px + dx * cos - dz * sin;
+        playerRig.position.z = pz + dx * sin + dz * cos;
+        playerRig.rotation.y += angle;
+      } else if (Math.abs(axisX) < 0.3) {
+        ctrl.userData.snapTurning = false;
+      }
+
+      ctrl.userData.wasTrigger = trigger;
+    }
+
+    // ── LEFT HAND: Smooth locomotion (joystick) + Menu (X button) ───────
+    if (hand === 'left') {
+      // Smooth locomotion — move playerRig in world XZ
+      if (Math.abs(axisX) > 0.1 || Math.abs(axisY) > 0.1) {
+        const xrCamera = renderer.xr.getCamera(camera);
+        const forward = new THREE.Vector3();
+        xrCamera.getWorldDirection(forward);
+        forward.y = 0; forward.normalize();
+        const right = new THREE.Vector3();
+        right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+        const speed = 0.05;
+        playerRig.position.addScaledVector(forward, -axisY * speed);
+        playerRig.position.addScaledVector(right,    axisX * speed);
+        playerRig.position.y = 0; // keep rig on the floor plane
+      }
+
+      // X button = toggle VR menu
+      if (menuBtn && !ctrl.userData.wasMenu) {
+        toggleVRMenu(ctrl);
+      }
+      ctrl.userData.wasMenu = menuBtn;
+
+      // Trigger on left = menu / measure / select (priority order)
+      if (trigger && !ctrl.userData.wasTrigger) {
+        if (vrMenuOpen) {
+          handleVRMenuTrigger(ctrl);
+        } else if (measureMode) {
+          placeMeasurePoint(ctrl);
+        } else {
+          selectObjectWithRay(ctrl);
+        }
+      }
+      ctrl.userData.wasTrigger = trigger;
+    }
+  }
+
+  updateStats();
+}
+
+// ── TELEPORT ─────────────────────────────────────────────────────────────────
+function buildTeleportMarker() {
+  const group = new THREE.Group();
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.25, 0.35, 32),
+    new THREE.MeshBasicMaterial({ color: 0x06b6d4, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  group.add(ring);
+
+  const dot = new THREE.Mesh(
+    new THREE.CircleGeometry(0.06, 16),
+    new THREE.MeshBasicMaterial({ color: 0x06b6d4, side: THREE.DoubleSide })
+  );
+  dot.rotation.x = -Math.PI / 2;
+  dot.position.y = 0.002;
+  group.add(dot);
+
+  group.visible = false;
+  scene.add(group);
+  teleportMarker = group;
+}
+
+function updateTeleportRay(ctrl, triggerDown) {
+  const ray = ctrl.getObjectByName('ray');
+  if (!triggerDown) {
+    if (teleportMarker) teleportMarker.visible = false;
+    if (ray) { ray.material.color.set(0x06b6d4); ray.scale.z = 5; }
+    teleportReady = false;
+    return;
+  }
+
+  // Cast a curved arc downward
+  ctrl.getWorldPosition(_v0);
+  ctrl.getWorldDirection(_v1);
+  _v1.negate();
+
+  // Simple parabola: sample N points along arc
+  const gravity = new THREE.Vector3(0, -9.8, 0);
+  const vel = _v1.clone().multiplyScalar(8);
+  const dt = 0.04;
+  let pos = _v0.clone();
+  let landed = false;
+
+  for (let i = 0; i < 30; i++) {
+    vel.addScaledVector(gravity, dt);
+    pos.addScaledVector(vel, dt);
+    if (pos.y < 0.01) {
+      pos.y = 0;
+      landed = true;
+      break;
+    }
+  }
+
+  teleportReady = landed;
+  if (teleportMarker) {
+    teleportMarker.visible = landed;
+    if (landed) teleportMarker.position.copy(pos);
+  }
+  if (ray) {
+    ray.material.color.set(landed ? 0x06b6d4 : 0xff4444);
+    // Point ray toward land point
+    const len = _v0.distanceTo(pos);
+    ray.scale.z = len;
+  }
+}
+
+function executeTeleport() {
+  if (!teleportMarker || !teleportMarker.visible) return;
+  const dest = teleportMarker.position.clone();
+  const xrCamera = renderer.xr.getCamera(camera);
+  const camPos = new THREE.Vector3();
+  xrCamera.getWorldPosition(camPos);
+  // Move rig so camera XZ lands on dest
+  const delta = new THREE.Vector3(dest.x - camPos.x, 0, dest.z - camPos.z);
+  playerRig.position.add(delta);
+  teleportMarker.visible = false;
+  teleportReady = false;
+}
+
+function resetModelPosition() {
+  if (scaleMode === 'mini') {
+    // Re-place mini model in front of current player position
+    ifcRoot.scale.set(1, 1, 1);
+    ifcRoot.position.set(0, 0, 0);
+    enterMiniMode();
+  } else {
+    positionPlayerForVR();
+  }
+  vrMenuOpen = false;
+  if (vrMenuGroup) vrMenuGroup.visible = false;
+}
+
+function toggleScaleMode() {
+  if (scaleMode === 'full') {
+    enterMiniMode();
+  } else {
+    enterFullMode();
+  }
+  vrMenuOpen = false;
+  if (vrMenuGroup) vrMenuGroup.visible = false;
+  rebuildVRMenuContent();
+}
+
+function enterMiniMode() {
+  scaleMode = 'mini';
+
+  // Compute bounds at full scale
+  const box = computeSceneBox();
+  if (box.isEmpty()) return;
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const maxDim = Math.max(size.x, size.y, size.z);
+  if (maxDim === 0) return;
+
+  // Shrink to 0.5 m max dimension
+  const miniScale = 0.5 / maxDim;
+  ifcRoot.scale.setScalar(miniScale);
+
+  // Compute center at mini scale and place 0.7 m ahead of player, 0.9 m high
+  const miniBox = computeSceneBox();
+  const miniCenter = new THREE.Vector3();
+  miniBox.getCenter(miniCenter);
+
+  // Player forward from rig yaw (rig default looks in -Z)
+  const fwd = new THREE.Vector3(0, 0, -1)
+    .applyEuler(new THREE.Euler(0, playerRig.rotation.y, 0));
+
+  const tx = playerRig.position.x + fwd.x * 0.7;
+  const tz = playerRig.position.z + fwd.z * 0.7;
+  const ty = 0.9; // table height
+
+  ifcRoot.position.x += tx - miniCenter.x;
+  ifcRoot.position.y += ty - miniCenter.y;
+  ifcRoot.position.z += tz - miniCenter.z;
+
+  // Hide floor grid — it looks wrong at miniatyr scale
+  scene.children.forEach(c => { if (c.isGridHelper) c.visible = false; });
+}
+
+function enterFullMode() {
+  scaleMode = 'full';
+  ifcRoot.scale.set(1, 1, 1);
+  ifcRoot.position.set(0, 0, 0);
+  scene.children.forEach(c => { if (c.isGridHelper) c.visible = true; });
+  positionPlayerForVR();
+}
+
+const _v0 = new THREE.Vector3();
+const _v1 = new THREE.Vector3();
+
+// ── OBJECT SELECTION ─────────────────────────────────────────────────────────
+function selectObjectWithRay(ctrl) {
+  tempMatrix.identity().extractRotation(ctrl.matrixWorld);
+  raycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
+  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+  const meshes = Object.values(meshMap).filter(m => m.visible);
+  const hits = raycaster.intersectObjects(meshes, false);
+  if (!hits.length) {
+    clearSelection();
+    return;
+  }
+
+  const hit = hits[0];
+  const mesh = hit.object;
+
+  // Deselect previous
+  if (selectedMesh && selectedMesh !== mesh) {
+    if (selectedMesh.userData._origColor !== undefined)
+      selectedMesh.material.color.setHex(selectedMesh.userData._origColor);
+  }
+
+  selectedMesh = mesh;
+  selectedMesh.userData._origColor = selectedMesh.material.color.getHex();
+  selectedMesh.material.color.set(0x60a5fa); // highlight blue
+
+  // Show info panel near hit point
+  showVRInfo(mesh, hit.point);
+}
+
+function clearSelection() {
+  if (selectedMesh) {
+    if (selectedMesh.userData._origColor !== undefined)
+      selectedMesh.material.color.setHex(selectedMesh.userData._origColor);
+    selectedMesh = null;
+  }
+  if (infoPanel) { scene.remove(infoPanel); infoPanel = null; }
+}
+
+// ── VR INFO PANEL (floating text) ───────────────────────────────────────────
+function showVRInfo(mesh, hitPoint) {
+  if (infoPanel) { scene.remove(infoPanel); infoPanel = null; }
+
+  const ud = mesh.userData;
+  const type = ud.type || '?';
+  const name = ud.name || '—';
+  const disc = ud.discipline || '?';
+  const discName = DISCIPLINES[disc]?.name || disc;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(13,15,20,0.95)';
+  roundRect(ctx, 0, 0, 512, 256, 16);
+  ctx.fill();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 3;
+  roundRect(ctx, 0, 0, 512, 256, 16);
+  ctx.stroke();
+
+  ctx.font = 'bold 22px sans-serif';
+  ctx.fillStyle = '#06b6d4';
+  ctx.fillText(formatTypeName(type), 20, 44);
+
+  ctx.font = '18px sans-serif';
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillText(name.substring(0, 38), 20, 80);
+
+  ctx.font = '16px sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('Disciplin: ' + discName, 20, 116);
+  ctx.fillText('IFC-typ: ' + type, 20, 148);
+
+  ctx.font = '13px monospace';
+  ctx.fillStyle = '#475569';
+  ctx.fillText('← Vänster trigger = välj objekt', 20, 200);
+  ctx.fillText('← X-knapp = meny', 20, 228);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, side: THREE.DoubleSide });
+  const geo = new THREE.PlaneGeometry(0.6, 0.3);
+  infoPanel = new THREE.Mesh(geo, mat);
+
+  // Position panel facing camera, above hit point
+  infoPanel.position.copy(hitPoint);
+  infoPanel.position.y += 0.5;
+  infoPanel.renderOrder = 999;
+
+  scene.add(infoPanel);
+}
+
+// Update info panel to always face camera
+function updateInfoPanel() {
+  if (!infoPanel) return;
+  const xrCamera = renderer.xr.getCamera(camera);
+  infoPanel.lookAt(xrCamera.getWorldPosition(new THREE.Vector3()));
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ── VR MENU ──────────────────────────────────────────────────────────────────
+function buildVRMenu() {
+  vrMenuGroup = new THREE.Group();
+  vrMenuGroup.visible = false;
+  scene.add(vrMenuGroup);
+  rebuildVRMenuContent();
+}
+
+function toggleVRMenu(ctrl) {
+  vrMenuOpen = !vrMenuOpen;
+  vrMenuGroup.visible = vrMenuOpen;
+
+  if (vrMenuOpen) {
+    // Position menu in front of left controller
+    const pos = new THREE.Vector3();
+    ctrl.getWorldPosition(pos);
+    const dir = new THREE.Vector3();
+    ctrl.getWorldDirection(dir);
+    vrMenuGroup.position.copy(pos).addScaledVector(dir, -0.4);
+    vrMenuGroup.position.y += 0.1;
+    vrMenuGroup.quaternion.copy(ctrl.quaternion);
+  }
+}
+
+function rebuildVRMenuContent() {
+  // Clear old
+  while (vrMenuGroup.children.length) {
+    const c = vrMenuGroup.children[0];
+    vrMenuGroup.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material?.map) c.material.map.dispose();
+    if (c.material) c.material.dispose();
+  }
+
+  const allDiscs = Object.keys(disciplineVisible);
+  if (!allDiscs.length) {
+    // No files loaded yet
+    const cv = makeMenuCanvas('Ingen fil laddad', []);
+    const tex = new THREE.CanvasTexture(cv);
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
+    vrMenuGroup.add(new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.3), mat));
+    return;
+  }
+
+  const cv = makeMenuCanvas('Discipliner', allDiscs.map(d => ({
+    key: d,
+    name: DISCIPLINES[d]?.name || d,
+    color: DISCIPLINES[d]?.color || '#888',
+    on: disciplineVisible[d] !== false
+  })));
+  const tex = new THREE.CanvasTexture(cv);
+  const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, side: THREE.DoubleSide });
+  const planeH = cv.height * (0.6 / 512);
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.6, planeH), mat);
+  mesh.userData.isVRMenu = true;
+  mesh.userData.menuType = 'discToggles';
+  vrMenuGroup.add(mesh);
+}
+
+const MENU_RESET_Y   = 58;
+const MENU_RESET_H   = 42;
+const MENU_SCALE_Y   = MENU_RESET_Y   + MENU_RESET_H   + 6;  // 106
+const MENU_SCALE_H   = 42;
+const MENU_MEASURE_Y = MENU_SCALE_Y   + MENU_SCALE_H   + 6;  // 154  v1.11.0
+const MENU_MEASURE_H = 42;
+const MENU_SECTION_Y = MENU_MEASURE_Y + MENU_MEASURE_H  + 6;  // 202  v1.11.0
+const MENU_SECTION_H = 42;
+const MENU_DISC_START = MENU_SECTION_Y + MENU_SECTION_H + 10; // 254
+
+function makeMenuCanvas(title, rows) {
+  const w = 512;
+  const h = rows.length ? MENU_DISC_START + rows.length * 46 + 20 : MENU_DISC_START + 20;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = 'rgba(13,15,20,0.97)';
+  roundRect(ctx, 0, 0, w, h, 16); ctx.fill();
+  ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 2;
+  roundRect(ctx, 0, 0, w, h, 16); ctx.stroke();
+
+  ctx.font = 'bold 24px sans-serif';
+  ctx.fillStyle = '#06b6d4';
+  ctx.fillText(title, 20, 44);
+
+  // Reset position button
+  ctx.fillStyle = '#1a2030';
+  roundRect(ctx, 16, MENU_RESET_Y, w - 32, MENU_RESET_H, 8); ctx.fill();
+  ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+  roundRect(ctx, 16, MENU_RESET_Y, w - 32, MENU_RESET_H, 8); ctx.stroke();
+  ctx.font = '18px sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('↩  Återställ position', 36, MENU_RESET_Y + 26);
+
+  // Scale toggle button — label reflects what pressing it will DO
+  const scaleLabel = scaleMode === 'full' ? '⊞  Miniatyrskala' : '⊟  1:1  Walk-through';
+  ctx.fillStyle = scaleMode === 'mini' ? '#1a2d20' : '#1a2030'; // tinted green in mini
+  roundRect(ctx, 16, MENU_SCALE_Y, w - 32, MENU_SCALE_H, 8); ctx.fill();
+  ctx.strokeStyle = scaleMode === 'mini' ? '#1e4d2e' : '#334155'; ctx.lineWidth = 1;
+  roundRect(ctx, 16, MENU_SCALE_Y, w - 32, MENU_SCALE_H, 8); ctx.stroke();
+  ctx.font = '18px sans-serif';
+  ctx.fillStyle = scaleMode === 'mini' ? '#4ade80' : '#94a3b8';
+  ctx.fillText(scaleLabel, 36, MENU_SCALE_Y + 26);
+
+  // Measure tool button
+  const measureLabel = measureMode ? '⊙  Mätverktyg — AV' : '⊙  Mätverktyg — PÅ';
+  ctx.fillStyle = measureMode ? '#1a2d20' : '#1a2030';
+  roundRect(ctx, 16, MENU_MEASURE_Y, w - 32, MENU_MEASURE_H, 8); ctx.fill();
+  ctx.strokeStyle = measureMode ? '#1e4d2e' : '#334155'; ctx.lineWidth = 1;
+  roundRect(ctx, 16, MENU_MEASURE_Y, w - 32, MENU_MEASURE_H, 8); ctx.stroke();
+  ctx.font = '18px sans-serif';
+  ctx.fillStyle = measureMode ? '#4ade80' : '#94a3b8';
+  ctx.fillText(measureLabel, 36, MENU_MEASURE_Y + 26);
+
+  // Section plane button
+  const sectionLabel = sectionMode
+    ? `⊠  Sektion AV  (${sectionHeight.toFixed(1)} m)`
+    : '⊡  Sektion PÅ';
+  ctx.fillStyle = sectionMode ? '#1a2030' : '#1a2030';
+  roundRect(ctx, 16, MENU_SECTION_Y, w - 32, MENU_SECTION_H, 8); ctx.fill();
+  ctx.strokeStyle = sectionMode ? '#f59e0b' : '#334155'; ctx.lineWidth = 1;
+  roundRect(ctx, 16, MENU_SECTION_Y, w - 32, MENU_SECTION_H, 8); ctx.stroke();
+  ctx.font = '18px sans-serif';
+  ctx.fillStyle = sectionMode ? '#fbbf24' : '#94a3b8';
+  ctx.fillText(sectionLabel, 36, MENU_SECTION_Y + 26);
+
+  rows.forEach((r, i) => {
+    const y = MENU_DISC_START + i * 46;
+    ctx.fillStyle = r.color;
+    ctx.fillRect(16, y + 4, 14, 28);
+
+    ctx.font = '20px sans-serif';
+    ctx.fillStyle = r.on ? '#e2e8f0' : '#475569';
+    ctx.fillText(r.name, 40, y + 24);
+
+    // Toggle indicator
+    ctx.fillStyle = r.on ? '#3b82f6' : '#1f2433';
+    roundRect(ctx, w - 70, y + 4, 50, 28, 10); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px sans-serif';
+    ctx.fillText(r.on ? 'PÅ' : 'AV', w - 58, y + 24);
+  });
+
+  return cv;
+}
+
+// Handle trigger press on VR menu items
+function handleVRMenuTrigger(ctrl) {
+  if (!vrMenuOpen || !vrMenuGroup.visible) return;
+  tempMatrix.identity().extractRotation(ctrl.matrixWorld);
+  raycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
+  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+  const menuMeshes = vrMenuGroup.children.filter(c => c.userData.isVRMenu);
+  const hits = raycaster.intersectObjects(menuMeshes, false);
+  if (!hits.length) return;
+
+  const hit = hits[0];
+  const uv = hit.uv;
+  if (!uv) return;
+
+  // Map UV to canvas coords
+  const cvW = 512;
+  const x = uv.x * cvW;
+  const cvH = hit.object.geometry.parameters.height * (512 / 0.6);
+  const y = (1 - uv.y) * cvH;
+
+  // Reset button
+  if (y >= MENU_RESET_Y && y < MENU_RESET_Y + MENU_RESET_H) {
+    resetModelPosition();
+    return;
+  }
+
+  // Scale toggle button
+  if (y >= MENU_SCALE_Y && y < MENU_SCALE_Y + MENU_SCALE_H) {
+    toggleScaleMode();
+    return;
+  }
+
+  // Measure tool button
+  if (y >= MENU_MEASURE_Y && y < MENU_MEASURE_Y + MENU_MEASURE_H) {
+    toggleMeasureMode();
+    return;
+  }
+
+  // Section plane button
+  if (y >= MENU_SECTION_Y && y < MENU_SECTION_Y + MENU_SECTION_H) {
+    toggleSectionMode();
+    return;
+  }
+
+  // Detect which discipline row was tapped
+  const allDiscs = Object.keys(disciplineVisible);
+  const rowH = 46;
+  const row = Math.floor((y - MENU_DISC_START) / rowH);
+  if (row >= 0 && row < allDiscs.length) {
+    const disc = allDiscs[row];
+    disciplineVisible[disc] = !(disciplineVisible[disc] !== false);
+    refreshDisciplineVisibility();
+    rebuildVRMenuContent();
+  }
+}
+
+// ── MEASURE TOOL (v1.11.0) ────────────────────────────────────────────────────
+function toggleMeasureMode() {
+  measureMode = !measureMode;
+  if (!measureMode) clearMeasurement();
+  vrMenuOpen = false;
+  if (vrMenuGroup) vrMenuGroup.visible = false;
+  rebuildVRMenuContent();
+}
+
+function clearMeasurement() {
+  measureA = null; measureB = null;
+  if (measureGroup) { scene.remove(measureGroup); measureGroup = null; }
+}
+
+function placeMeasurePoint(ctrl) {
+  tempMatrix.identity().extractRotation(ctrl.matrixWorld);
+  raycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
+  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+
+  const targets = [];
+  ifcRoot.traverse(c => { if (c.isMesh && c.visible) targets.push(c); });
+  const hits = raycaster.intersectObjects(targets, false);
+  if (!hits.length) return;
+
+  const pt = hits[0].point.clone();
+
+  if (measureA === null) {
+    measureA = pt;
+    _addMeasureSphere(pt, 0x22c55e);
+  } else if (measureB === null) {
+    measureB = pt;
+    _addMeasureSphere(pt, 0xfbbf24);
+    _showMeasureLine();
+  } else {
+    clearMeasurement(); // third press resets
+  }
+}
+
+function _addMeasureSphere(pt, color) {
+  if (!measureGroup) { measureGroup = new THREE.Group(); scene.add(measureGroup); }
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(0.025, 8, 8),
+    new THREE.MeshBasicMaterial({ color, depthTest: false })
+  );
+  m.position.copy(pt);
+  measureGroup.add(m);
+}
+
+function _showMeasureLine() {
+  if (!measureA || !measureB || !measureGroup) return;
+  const dist = measureA.distanceTo(measureB);
+
+  const lineGeo = new THREE.BufferGeometry().setFromPoints([measureA, measureB]);
+  measureGroup.add(new THREE.Line(lineGeo,
+    new THREE.LineBasicMaterial({ color: 0xfbbf24, depthTest: false })));
+
+  // Canvas label
+  const cv = document.createElement('canvas');
+  cv.width = 256; cv.height = 64;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(0, 0, 256, 64);
+  ctx.font = 'bold 30px sans-serif';
+  ctx.fillStyle = '#fbbf24';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${dist.toFixed(2)} m`, 128, 44);
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false })
+  );
+  sprite.scale.set(0.5, 0.125, 1);
+  sprite.position.copy(measureA).lerp(measureB, 0.5);
+  sprite.position.y += 0.08;
+  measureGroup.add(sprite);
+}
+
+// ── SECTION PLANE (v1.11.0) ───────────────────────────────────────────────────
+function toggleSectionMode() {
+  sectionMode = !sectionMode;
+  applySection();
+  vrMenuOpen = false;
+  if (vrMenuGroup) vrMenuGroup.visible = false;
+  rebuildVRMenuContent();
+}
+
+function applySection() {
+  const planes = sectionMode ? [sectionPlane] : [];
+  ifcRoot.traverse(child => {
+    if (!child.material) return;
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    mats.forEach(m => { m.clippingPlanes = planes; });
+  });
+}
+
+// ── DISCIPLINE VISIBILITY ─────────────────────────────────────────────────────
+function refreshDisciplineVisibility() {
+  for (const [key, mesh] of Object.entries(meshMap)) {
+    const disc = mesh.userData.discipline;
+    if (disc !== undefined) {
+      mesh.visible = disciplineVisible[disc] !== false;
+    }
+  }
+  updateDisciplinePanelUI();
+}
+
+function updateDisciplinePanelUI() {
+  const rows = document.getElementById('disc-rows');
+  if (!rows) return;
+  rows.innerHTML = Object.keys(disciplineVisible).map(d => {
+    const info = DISCIPLINES[d] || { name: d, color: '#888' };
+    const on = disciplineVisible[d] !== false;
+    return `<div class="disc-row">
+      <span class="disc-badge" style="background:${info.color}">${d}</span>
+      <span class="disc-label">${info.name}</span>
+      <button class="disc-toggle ${on ? '' : 'off'}" onclick="toggleDisc('${d}')"></button>
+    </div>`;
+  }).join('');
+}
+
+function toggleDisc(key) {
+  disciplineVisible[key] = !(disciplineVisible[key] !== false);
+  refreshDisciplineVisibility();
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const el = document.getElementById('stats-text');
+  if (!el) return;
+  const total = Object.keys(meshMap).length;
+  const vis = Object.values(meshMap).filter(m => m.visible).length;
+  el.textContent = `${loadedFiles.length} fil(er) · ${total} mesh · ${vis} synliga`;
+}
+
+// ── FILE DROP & LOAD ─────────────────────────────────────────────────────────
+function setupFileDrop() {
+  const zone = document.getElementById('drop-zone');
+  const input = document.getElementById('file-input');
+  const inputHud = document.getElementById('file-input-hud');
+
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('dragover');
+    const files = [...e.dataTransfer.files].filter(f => f.name.toLowerCase().endsWith('.ifc'));
+    if (files.length) loadFiles(files);
+  });
+  // Also allow drop on whole body when overlay is hidden
+  document.body.addEventListener('dragover', e => { e.preventDefault(); });
+  document.body.addEventListener('drop', e => {
+    e.preventDefault();
+    const files = [...e.dataTransfer.files].filter(f => f.name.toLowerCase().endsWith('.ifc'));
+    if (files.length) loadFiles(files);
+  });
+  input.addEventListener('change', () => {
+    const files = [...input.files].filter(f => f.name.toLowerCase().endsWith('.ifc'));
+    if (files.length) loadFiles(files);
+    input.value = '';
+  });
+  if (inputHud) {
+    inputHud.addEventListener('change', () => {
+      const files = [...inputHud.files].filter(f => f.name.toLowerCase().endsWith('.ifc'));
+      if (files.length) loadFiles(files);
+      inputHud.value = '';
+    });
+  }
+}
+
+async function loadFromURL() {
+  const input = document.getElementById('url-input');
+  const status = document.getElementById('url-status');
+  let url = input.value.trim();
+  if (!url) return;
+  if (!url.startsWith('http')) url = 'http://' + url;
+
+  // URL-encode spaces and special chars in path (but not the protocol/host)
+  try {
+    const u = new URL(url);
+    // Re-encode path segments — fixes "TEST IFCer" → "TEST%20IFCer"
+    u.pathname = u.pathname.split('/').map(seg => encodeURIComponent(decodeURIComponent(seg))).join('/');
+    url = u.toString();
+  } catch(e) { /* keep original url */ }
+
+  const filename = decodeURIComponent(url.split('/').pop().split('?')[0]) || 'model.ifc';
+  if (!filename.toLowerCase().endsWith('.ifc')) {
+    status.style.color = '#f87171';
+    status.textContent = 'URL måste peka på en .ifc-fil';
+    return;
+  }
+
+  status.style.color = '#64748b';
+  status.textContent = 'Hämtar ' + filename + '...';
+
+  try {
+    const res = await fetch(url, { mode: 'cors' });
+    if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
+    const buf = await res.arrayBuffer();
+    status.textContent = '';
+    await loadFileBuffer(buf, filename);
+  } catch(e) {
+    status.style.color = '#f87171';
+    status.textContent = 'Fel: ' + e.message;
+    console.error('URL load error:', e);
+  }
+}
+
+async function loadFileBuffer(buf, filename) {
+  // Warn for very large files
+  const mb = buf.byteLength / (1024 * 1024);
+  if (mb > 50) {
+    const ok = confirm(
+      `${filename} är ${mb.toFixed(0)} MB — stora filer tar lång tid.\n\nFortsätta ändå?`
+    );
+    if (!ok) return;
+  }
+  showLoading(`Laddar ${filename}...`, 5);
+  try {
+    await parseAndRender(buf, filename);
+  } catch(e) {
+    console.error('Parse error:', e);
+    alert('Fel vid inläsning: ' + e.message);
+  }
+  hideLoading();
+  document.getElementById('ui-overlay').classList.add('hidden');
+  document.getElementById('stats-bar').classList.add('visible');
+  document.getElementById('disc-panel').classList.add('floating');
+  updateVRButton();
+  frameCamera();
+  updateStats();
+}
+
+async function loadFiles(files) {
+  for (const file of files) {
+    const buf = await file.arrayBuffer();
+    await loadFileBuffer(buf, file.name);
+  }
+}
+
+function updateVRButton() {
+  const btn = document.getElementById('vr-btn');
+  const msg = document.getElementById('no-vr-msg');
+  if (!navigator.xr) {
+    msg.style.display = 'inline';
+    return;
+  }
+  navigator.xr.isSessionSupported('immersive-vr').then(ok => {
+    if (ok) {
+      btn.style.display = 'inline-block';
+    } else {
+      msg.style.display = 'inline';
+    }
+  });
+}
+
+// ── LOADING UI ────────────────────────────────────────────────────────────────
+function showLoading(txt, pct) {
+  const el = document.getElementById('loading');
+  el.style.display = 'flex';
+  document.getElementById('load-text').textContent = txt;
+  if (pct !== undefined) setProgress(pct);
+}
+function hideLoading() { document.getElementById('loading').style.display = 'none'; }
+function setSub(t) { document.getElementById('load-sub').textContent = t; }
+function setProgress(v) { document.getElementById('prog-bar').style.width = v + '%'; }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── SCENE BOUNDING BOX ───────────────────────────────────────────────────────
+// Three.js r128's Box3.setFromObject ignores InstancedMesh instance matrices —
+// it only uses the geometry's local bounding box. This helper fixes that.
+function computeSceneBox() {
+  const box = new THREE.Box3();
+  const tmpBox = new THREE.Box3();
+  const tmpMat = new THREE.Matrix4();
+  const tmpCombined = new THREE.Matrix4();
+  ifcRoot.updateMatrixWorld(true);
+  ifcRoot.traverse(child => {
+    if (!child.geometry) return;
+    if (child.isInstancedMesh) {
+      if (!child.geometry.boundingBox) child.geometry.computeBoundingBox();
+      const gbox = child.geometry.boundingBox;
+      for (let i = 0; i < child.count; i++) {
+        child.getMatrixAt(i, tmpMat);
+        // full transform = ifcRoot.matrixWorld (rotation -PI/2) * instanceMat
+        tmpCombined.multiplyMatrices(child.parent.matrixWorld, tmpMat);
+        tmpBox.copy(gbox).applyMatrix4(tmpCombined);
+        box.union(tmpBox);
+      }
+    } else {
+      tmpBox.setFromObject(child);
+      if (!tmpBox.isEmpty()) box.union(tmpBox);
+    }
+  });
+  return box;
+}
+
+// ── CAMERA FRAME ─────────────────────────────────────────────────────────────
+function frameCamera() {
+  renderer.render(scene, camera); // ensure matrixWorld is current
+  const box = computeSceneBox();
+  if (box.isEmpty()) return;
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const dist = maxDim * 1.2;
+  camera.position.set(center.x + dist * 0.7, center.y + dist * 0.5, center.z + dist * 0.7);
+  camera.lookAt(center);
+  // Sync orbit state
+  orbitTarget.copy(center);
+  orbitRadius = dist;
+  orbitTheta = Math.PI / 4;
+  orbitPhi = Math.PI / 3;
+}
+
+// ── DESKTOP ORBIT (mouse drag to rotate, wheel to zoom) ───────────────────
+const orbitTarget = new THREE.Vector3();
+let orbitActive = false, orbitLast = { x: 0, y: 0 };
+let orbitPhi = Math.PI / 4, orbitTheta = Math.PI / 4, orbitRadius = 100;
+
+function setupOrbit() {
+  const canvas = renderer.domElement;
+  canvas.addEventListener('mousedown', e => {
+    if (e.button === 0) { orbitActive = true; orbitLast = { x: e.clientX, y: e.clientY }; }
+  });
+  window.addEventListener('mouseup', () => { orbitActive = false; });
+  window.addEventListener('mousemove', e => {
+    if (!orbitActive) return;
+    const dx = (e.clientX - orbitLast.x) * 0.005;
+    const dy = (e.clientY - orbitLast.y) * 0.005;
+    orbitLast = { x: e.clientX, y: e.clientY };
+    orbitTheta -= dx;
+    orbitPhi = Math.max(0.05, Math.min(Math.PI - 0.05, orbitPhi + dy));
+    updateOrbit();
+  });
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    orbitRadius *= (1 + e.deltaY * 0.001);
+    orbitRadius = Math.max(0.5, orbitRadius);
+    updateOrbit();
+  }, { passive: false });
+}
+
+function updateOrbit() {
+  if (xrSession) return; // don't override in VR
+  const x = orbitTarget.x + orbitRadius * Math.sin(orbitPhi) * Math.sin(orbitTheta);
+  const y = orbitTarget.y + orbitRadius * Math.cos(orbitPhi);
+  const z = orbitTarget.z + orbitRadius * Math.sin(orbitPhi) * Math.cos(orbitTheta);
+  camera.position.set(x, y, z);
+  camera.lookAt(orbitTarget);
+}
+
+// ── TINY UTIL ─────────────────────────────────────────────────────────────────
+function R(p) {
+  const refs = [];
+  const re = /#(\d+)/g;
+  let m;
+  while ((m = re.exec(p)) !== null) refs.push(+m[1]);
+  return refs;
+}
+
+function getLocalMat(locPlacement, lpl, ap3d, pts, dirs) {
+  if (locPlacement == null) return new THREE.Matrix4();
+  const mat = new THREE.Matrix4();
+  const stack = [];
+  let cur = locPlacement;
+  while (cur != null) {
+    const lp = lpl[cur];
+    if (!lp) break;
+    stack.push(lp.ap ?? null);
+    cur = lp.relTo ?? null;
+  }
+  for (let i = stack.length - 1; i >= 0; i--) {
+    const apId = stack[i];
+    if (apId == null) continue;
+    const ap = ap3d[apId];
+    if (!ap) continue;
+    const loc = pts[ap.loc] || [0, 0, 0];
+    const axisV = ap.axis != null ? dirs[ap.axis] : null;
+    const refV = ap.ref != null ? dirs[ap.ref] : null;
+
+    let Z = axisV ? new THREE.Vector3(...axisV).normalize() : new THREE.Vector3(0, 0, 1);
+    let X = refV ? new THREE.Vector3(...refV).normalize() : new THREE.Vector3(1, 0, 0);
+    let Y = new THREE.Vector3().crossVectors(Z, X).normalize();
+    X = new THREE.Vector3().crossVectors(Y, Z).normalize();
+
+    const local = new THREE.Matrix4().makeBasis(X, Y, Z);
+    local.setPosition(loc[0], loc[1], loc[2]);
+    mat.multiply(local);
+  }
+  return mat;
+}
+
+function parseCTOP(p) {
+  const r = R(p);
+  const nums = p.replace(/#\d+/g, '').match(/([-\d.eE+]+)/g) || [];
+  // IFC4 CTOP3DNONUNIFORM: (Axis1, Axis2, LocalOrigin, Scale, Scale2, Scale3)
+  const scale  = parseFloat(nums[0]) || 1;
+  const scale2 = parseFloat(nums[1]) || scale;
+  const scale3 = parseFloat(nums[2]) || scale;
+  return { axisIds: r.slice(0, -1), originId: r[r.length - 1] || null, scale, scale2, scale3 };
+}
+
+function applyCTOP(mat, ctop, pts, dirs) {
+  if (!ctop) return mat;
+  const origin = ctop.originId != null ? pts[ctop.originId] : null;
+  const ox = origin ? origin[0] : 0, oy = origin ? origin[1] : 0, oz = origin ? origin[2] : 0;
+  const sc  = ctop.scale  || 1;
+  const sc2 = ctop.scale2 || sc;
+  const sc3 = ctop.scale3 || sc;
+  const ax = ctop.axisIds || [];
+  let X = ax[0] != null && dirs[ax[0]] ? new THREE.Vector3(...dirs[ax[0]]).normalize() : new THREE.Vector3(1, 0, 0);
+  let Z = ax[1] != null && dirs[ax[1]] ? new THREE.Vector3(...dirs[ax[1]]).normalize() : new THREE.Vector3(0, 0, 1);
+  let Y = new THREE.Vector3().crossVectors(Z, X).normalize();
+  X = new THREE.Vector3().crossVectors(Y, Z).normalize();
+  // v1.3.0: per-axis scale (NONUNIFORM: Scale→X, Scale2→Y, Scale3→Z)
+  X.multiplyScalar(sc); Y.multiplyScalar(sc2); Z.multiplyScalar(sc3);
+  const cm = new THREE.Matrix4().makeBasis(X, Y, Z);
+  cm.setPosition(ox, oy, oz);
+  return mat.clone().multiply(cm);
+}
+
+function makeColor(rgba, disc) {
+  if (rgba) return new THREE.Color(rgba.r, rgba.g, rgba.b);
+  const hex = DISCIPLINES[disc]?.color || '#94a3b8';
+  return new THREE.Color(hex);
+}
+
+function formatTypeName(t) {
+  const map = {
+    IFCWALL:'Vägg', IFCWALLSTANDARDCASE:'Vägg', IFCSLAB:'Bjälklag',
+    IFCROOF:'Tak', IFCDOOR:'Dörr', IFCWINDOW:'Fönster',
+    IFCCOLUMN:'Pelare', IFCBEAM:'Balk', IFCSTAIR:'Trappa',
+    IFCSTAIRFLIGHT:'Trappa', IFCRAMP:'Ramp', IFCSPACE:'Rum',
+    IFCBUILDINGSTOREY:'Våningsplan', IFCBUILDING:'Byggnad', IFCSITE:'Tomt',
+    IFCFURNISHINGELEMENT:'Möbel', IFCFLOWSEGMENT:'Kanal/Rör',
+    IFCFLOWFITTING:'Koppling', IFCDUCTFITTING:'Kanaldetalj',
+    IFCDUCTSEGMENT:'Kanalsegment', IFCPIPESEGMENT:'Rörsegment',
+    IFCPIPEFITTING:'Rördetalj', IFCPLATE:'Platta', IFCMEMBER:'Balk/Stång',
+    IFCCOVERING:'Beklädnad', IFCBUILDINGELEMENTPROXY:'Element',
+    IFCFLOWTERMINAL:'Terminal', IFCSANITARYTERMINAL:'Sanitär',
+    IFCFLOWCONTROLLER:'Reglage', IFCCURTAINWALL:'Curtainwall',
+    IFCRAILING:'Räcke', IFCLIGHTFIXTURE:'Armatur', IFCFOOTING:'Grundsula'
+  };
+  return map[t] || t.replace('IFC', '');
+}
+
+// ── CSG: Sutherland-Hodgman subtract (v1.9.0) ────────────────────────────────
+// Builds a set of outward half-planes from a convex cutter mesh.
+function buildCutterHalfPlanes(geo) {
+  const pos = geo.attributes.position;
+  const byAxis = new Map();
+  for (let i = 0; i < pos.count; i += 3) {
+    const a = new THREE.Vector3().fromBufferAttribute(pos, i);
+    const b = new THREE.Vector3().fromBufferAttribute(pos, i + 1);
+    const c = new THREE.Vector3().fromBufferAttribute(pos, i + 2);
+    const n = new THREE.Vector3()
+      .crossVectors(new THREE.Vector3().subVectors(b, a), new THREE.Vector3().subVectors(c, a));
+    if (n.lengthSq() < 1e-16) continue;
+    n.normalize();
+    const flip = (Math.abs(n.x) >= Math.abs(n.y) && Math.abs(n.x) >= Math.abs(n.z))
+      ? Math.sign(n.x) : (Math.abs(n.y) >= Math.abs(n.z) ? Math.sign(n.y) : Math.sign(n.z));
+    const cn = n.clone().multiplyScalar(flip < 0 ? -1 : 1);
+    const key = `${cn.x.toFixed(1)},${cn.y.toFixed(1)},${cn.z.toFixed(1)}`;
+    const d = -n.dot(a);
+    if (!byAxis.has(key)) byAxis.set(key, []);
+    byAxis.get(key).push({ n: n.clone(), d });
+  }
+  const planes = [];
+  for (const entries of byAxis.values()) {
+    const avg_d = entries.reduce((s, e) => s + e.d, 0) / entries.length;
+    planes.push({ n: entries[0].n.clone(), d: avg_d });
+  }
+  return planes;
+}
+
+// Sutherland-Hodgman: keep the part of poly OUTSIDE the half-plane (n·P+d ≥ 0)
+function clipPolyKeepOutside(poly, n, d) {
+  if (poly.length === 0) return [];
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const curr = poly[i];
+    const next = poly[(i + 1) % poly.length];
+    const dc = n.dot(curr) + d;
+    const dn = n.dot(next) + d;
+    if (dc >= -1e-7) out.push(curr.clone());
+    if ((dc > 1e-7) !== (dn > 1e-7)) {
+      const t = dc / (dc - dn);
+      out.push(curr.clone().lerp(next, t));
+    }
+  }
+  return out;
+}
+
+// Subtract cutterGeo from firstGeo; returns new BufferGeometry (or firstGeo unchanged on failure).
+function csgSubtract(firstGeo, cutterGeo) {
+  try {
+    const planes = buildCutterHalfPlanes(cutterGeo);
+    if (planes.length === 0) return firstGeo;
+    const srcPos = firstGeo.attributes.position;
+    const srcNrm = firstGeo.attributes.normal;
+    if (!srcPos) return firstGeo;
+    const outPos = [], outNrm = [];
+    const EPS = 1e-5;
+    function insideCutter(v) {
+      for (const { n, d } of planes) if (n.dot(v) + d > EPS) return false;
+      return true;
+    }
+    for (let i = 0; i < srcPos.count; i += 3) {
+      const va = new THREE.Vector3().fromBufferAttribute(srcPos, i);
+      const vb = new THREE.Vector3().fromBufferAttribute(srcPos, i + 1);
+      const vc = new THREE.Vector3().fromBufferAttribute(srcPos, i + 2);
+      const fn = srcNrm
+        ? new THREE.Vector3().fromBufferAttribute(srcNrm, i).normalize()
+        : new THREE.Vector3().crossVectors(
+            new THREE.Vector3().subVectors(vb, va),
+            new THREE.Vector3().subVectors(vc, va)).normalize();
+      const ia = insideCutter(va), ib = insideCutter(vb), ic = insideCutter(vc);
+      if (ia && ib && ic) continue; // fully inside cutter — remove
+      if (!ia && !ib && !ic) {     // fully outside — keep
+        outPos.push(va.x, va.y, va.z, vb.x, vb.y, vb.z, vc.x, vc.y, vc.z);
+        outNrm.push(fn.x, fn.y, fn.z, fn.x, fn.y, fn.z, fn.x, fn.y, fn.z);
+        continue;
+      }
+      // Partial — clip against each outward half-plane
+      let poly = [va, vb, vc];
+      for (const { n, d } of planes) {
+        poly = clipPolyKeepOutside(poly, n, d);
+        if (poly.length < 3) break;
+      }
+      for (let k = 1; k < poly.length - 1; k++) {
+        const pa = poly[0], pb = poly[k], pc = poly[k + 1];
+        const cn = new THREE.Vector3().crossVectors(
+          new THREE.Vector3().subVectors(pb, pa),
+          new THREE.Vector3().subVectors(pc, pa)).normalize();
+        if (cn.lengthSq() < 1e-8) continue;
+        outPos.push(pa.x, pa.y, pa.z, pb.x, pb.y, pb.z, pc.x, pc.y, pc.z);
+        outNrm.push(cn.x, cn.y, cn.z, cn.x, cn.y, cn.z, cn.x, cn.y, cn.z);
+      }
+    }
+    if (outPos.length < 9) return firstGeo;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(outPos, 3));
+    geo.setAttribute('normal',   new THREE.Float32BufferAttribute(outNrm, 3));
+    return geo;
+  } catch (e) {
+    return firstGeo;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IFC PARSER — adapted from ifc-viewer-v2.7.1
+// Geometry: extrudes, shells, facetedBrep, polygonal facesets, swept disk
+// ═══════════════════════════════════════════════════════════════════════════
+async function parseAndRender(data, filename) {
+  const disc = detectDiscipline(filename);
+  disciplineVisible[disc] = disciplineVisible[disc] ?? true;
+
+  const text = new TextDecoder('utf-8').decode(data);
+  let US = 0.001;
+  if (text.includes('.MILLI.,.METRE.')) US = 0.001;
+  else if (text.includes('.CENTI.,.METRE.')) US = 0.01;
+  else US = 1.0;
+  UNIT_SCALE = US;
+
+  setProgress(5); setSub('Parsar STEP...');
+
+  // Single-pass parse + extract (no em object — saves memory for large files)
+  const pts = {}, dirs = {}, ap3d = {}, lpl = {}, loops = {}, fbnd = {}, faces = {},
+    shells = {}, repMaps = {}, mapItems = {}, shReps = {}, shRepId = {}, pds = {}, ctops = {},
+    extrudes = {}, profiles = {}, fbreps = {}, sweptDisks = {}, boolOps = {},
+    cartPtLists3D = {}, indexedPolyFaces = {}, polyFaceSets = {}, triFaceSets = {},
+    colours = {}, renderings = {}, surfStyles = {}, styleAssigns = {}, styledItems = [],
+    relAssocMat = [], relDefByType = [], elementTypes = {},
+    cartPtLists2D = {}, indexedPolyCurves = {}, polylines = {},
+    shellModels = {}, // v1.7.0: IFCSHELLBASEDSURFACEMODEL wrapper → shell ref
+    revolvedSolids = {}, // v1.10.0: IFCREVOLVEDAREASOLID → {profileId, posId, axis1Id, angle}
+    ap2d = {}, // v1.10.0: IFCAXIS2PLACEMENT2D → {loc, ref}
+    relVoids = []; // v1.9.0: IFCRELVOIDSELEMENT → [{elementId, openingId}]
+
+  // For two-pass product resolution we need to store product params
+  const productParams = {}; // id → raw param string (only for products)
+
+  const PRODUCT_TYPES = new Set([
+    'IFCWALL','IFCWALLSTANDARDCASE','IFCSLAB','IFCDOOR','IFCWINDOW',
+    'IFCCOLUMN','IFCBEAM','IFCROOF','IFCSTAIR','IFCSTAIRFLIGHT','IFCFURNISHINGELEMENT',
+    'IFCSPACE','IFCRAMP','IFCPLATE','IFCMEMBER','IFCCOVERING',
+    'IFCFLOWSEGMENT','IFCFLOWFITTING','IFCDUCTSEGMENT','IFCDUCTFITTING',
+    'IFCPIPESEGMENT','IFCPIPEFITTING','IFCBUILDINGSTOREY','IFCBUILDINGELEMENTPROXY',
+    'IFCFLOWTERMINAL','IFCDISTRIBUTIONELEMENT','IFCSANITARYTERMINAL',
+    'IFCCURTAINWALL','IFCRAILING','IFCLIGHTFIXTURE','IFCFOOTING',
+    'IFCAIRTERMINAL','IFCFIRESUPPRESSIONTERMINAL','IFCVALVE','IFCPUMP','IFCTANK',
+    'IFCFAN','IFCFLOWCONTROLLER','IFCENERGYCONVERSIONDEVICE','IFCFLOWMOVINGDEVICE',
+    // v1.2.0: saknade ventilationstyper
+    'IFCDAMPER','IFCDUCTSILENCER','IFCFLOWTREATMENTDEVICE','IFCFLOWSTORAGEDEVICE',
+    'IFCHUMIDIFIER','IFCCOIL','IFCFILTER','IFCBURNER','IFCCOMPRESSOR','IFCCONDENSER',
+    'IFCPILE','IFCCHIMNEY','IFCELECTRICAPPLIANCE','IFCMEDICALDEVICE',
+    'IFCMECHANICALFASTENER','IFCDISCRETEACCESSORY','IFCFLOWINSTRUMENT',
+    'IFCDISTRIBUTIONPORT','IFCDISTRIBUTIONSYSTEM',
+    'IFCCABLECARRIERSEGMENT','IFCCABLECARRIERFITTING',
+    'IFCOPENINGELEMENT' // v1.9.0: needed for CSG void subtraction
+  ]);
+  const products = {};
+
+  // Parse line-by-line in chunks, extract directly (no intermediate em object)
+  const textLen = text.length;
+  const CHUNK_SIZE = 200_000; // characters per chunk
+  let pos = 0, lineStart = 0, lineEnd = 0;
+  let chunkCount = 0;
+
+  // Simple line splitter that avoids building a massive array
+  const RE_ENTITY = /^#(\d+)\s*=\s*([A-Z][A-Z0-9_]*)\s*\(([\s\S]*)\)\s*$/i;
+
+  // We split on semicolons but need to handle multi-line entities
+  // Strategy: remove comments, then split on \n, join continuation lines
+  const cleanText = text.replace(/\/\*[\s\S]*?\*\//g, '');
+  const rawLines = cleanText.split('\n');
+  const totalLines = rawLines.length;
+  let buf = '';
+  const PARSE_CHUNK = 8000;
+
+  for (let i = 0; i < totalLines; i++) {
+    if (i % PARSE_CHUNK === 0 && i > 0) {
+      setProgress(5 + 30 * (i / totalLines));
+      await sleep(0);
+    }
+    const ln = rawLines[i].trim();
+    if (!ln || ln === 'ENDSEC;' || ln === 'END-ISO-10303-21;') { buf = ''; continue; }
+    buf += ' ' + ln;
+    if (!ln.endsWith(';')) continue;
+    // Complete statement — strip trailing semicolon and parse
+    const stmt = buf.trim().slice(0, -1);
+    buf = '';
+    if (!stmt.startsWith('#')) continue;
+    const m = stmt.match(/^#(\d+)\s*=\s*([A-Z][A-Z0-9_]*)\s*\(([\s\S]*)\)$/i);
+    if (!m) continue;
+    const id = +m[1], type = m[2].toUpperCase(), p = m[3];
+
+    switch (type) {
+      case 'IFCCARTESIANPOINT': {
+        const m = p.match(/\(\s*([-\d.eE+]+)\s*,\s*([-\d.eE+]+)(?:\s*,\s*([-\d.eE+]+))?\s*\)/);
+        if (m) pts[id] = [+m[1], +m[2], +(m[3] || 0)]; break;
+      }
+      case 'IFCDIRECTION': {
+        const m = p.match(/\(\s*([-\d.eE+]+)\s*,\s*([-\d.eE+]+)(?:\s*,\s*([-\d.eE+]+))?\s*\)/);
+        if (m) dirs[id] = [+m[1], +m[2], +(m[3] || 0)]; break;
+      }
+      case 'IFCAXIS2PLACEMENT3D': { const r = R(p); ap3d[id] = { loc: r[0] ?? null, axis: r[1] ?? null, ref: r[2] ?? null }; break; }
+      case 'IFCLOCALPLACEMENT': {
+        const r = R(p), raw = p.replace(/\s/g, '');
+        if (raw.startsWith('$,')) lpl[id] = { relTo: null, ap: r[0] ?? null };
+        else lpl[id] = { relTo: r[0] ?? null, ap: r[1] ?? null };
+        break;
+      }
+      case 'IFCPOLYLINE': { polylines[id] = R(p); break; }
+      case 'IFCPOLYLOOP': { loops[id] = R(p); break; }
+      case 'IFCFACEOUTERBOUND': { const r = R(p); if (r[0] != null) fbnd[id] = { loopId: r[0], outer: true }; break; }
+      case 'IFCFACEBOUND': { const r = R(p); if (r[0] != null) fbnd[id] = { loopId: r[0], outer: false }; break; }
+      case 'IFCFACE': { faces[id] = R(p); break; }
+      case 'IFCOPENSHELL': case 'IFCCLOSEDSHELL': case 'IFCCONNECTEDFACESET': { shells[id] = R(p); break; }
+      case 'IFCSHELLBASEDSURFACEMODEL': { const r = R(p); if (r[0] != null) shellModels[id] = r[0]; break; } // v1.7.0
+      case 'IFCREPRESENTATIONMAP': { const r = R(p); repMaps[id] = { apId: r[0] ?? null, repId: r[1] ?? null }; break; }
+      case 'IFCMAPPEDITEM': { const r = R(p); mapItems[id] = { repMapId: r[0] ?? null, transformId: r[1] ?? null }; break; }
+      case 'IFCSHAPEREPRESENTATION': {
+        shReps[id] = R(p);
+        const strs = p.match(/'([^']*)'/g);
+        shRepId[id] = strs && strs[0] ? strs[0].slice(1, -1) : null;
+        break;
+      }
+      case 'IFCPRODUCTDEFINITIONSHAPE': { pds[id] = R(p); break; }
+      case 'IFCCARTESIANTRANSFORMATIONOPERATOR3D':
+      case 'IFCCARTESIANTRANSFORMATIONOPERATOR3DNONUNIFORM':
+      case 'IFCCARTESIANTRANSFORMATIONOPERATOR': { ctops[id] = parseCTOP(p); break; }
+      case 'IFCFACETEDBREP': { const r = R(p); if (r[0] != null) fbreps[id] = r[0]; break; }
+      case 'IFCEXTRUDEDAREASOLID': {
+        const r = R(p);
+        const depthMatch = p.match(/,\s*([\d.eE+\-]+)\s*$/);
+        extrudes[id] = { profileId: r[0] ?? null, posId: r[1] ?? null, dirId: r[2] ?? null, depth: depthMatch ? +depthMatch[1] : 1.0 };
+        break;
+      }
+      case 'IFCARBITRARYCLOSEDPROFILEDEF': { const r = R(p); profiles[id] = { type: 'closed', curveId: r[0] ?? null }; break; }
+      case 'IFCARBITRARYPROFILEDEFWITHVOIDS': { const r = R(p); profiles[id] = { type: 'closedWithVoids', outerCurveId: r[0] ?? null, innerCurveIds: r.slice(1) }; break; }
+      case 'IFCRECTANGLEPROFILEDEF': {
+        const nums = p.match(/([\d.eE+\-]+)/g) || [];
+        const r = R(p);
+        profiles[id] = { type: 'rectangle', posId: r[r.length - 1] ?? null, xDim: parseFloat(nums[nums.length - 2]) || 1, yDim: parseFloat(nums[nums.length - 1]) || 1 };
+        break;
+      }
+      case 'IFCCIRCLEPROFILEDEF': {
+        const r = R(p); const nums = p.match(/([\d.eE+\-]+)/g) || [];
+        profiles[id] = { type: 'circle', posId: r[r.length - 1] ?? null, radius: parseFloat(nums[nums.length - 1]) || 0.5 };
+        break;
+      }
+      case 'IFCCIRCLEHOLLOWPROFILEDEF': {
+        const r = R(p); const nums = p.match(/([\d.eE+\-]+)/g) || [];
+        profiles[id] = { type: 'circle', posId: r[r.length - 1] ?? null, radius: parseFloat(nums[nums.length - 2]) || 0.1 };
+        break;
+      }
+      case 'IFCISHAPEPROFILEDEF': {
+        const r = R(p); const nums = p.match(/([\d.eE+\-]+)/g) || [];
+        const n = nums.length;
+        profiles[id] = { type: 'ishape', posId: r.length > 0 ? r[r.length-1] : null,
+          ow: parseFloat(nums[n-4])||0.1, od: parseFloat(nums[n-3])||0.2,
+          wt: parseFloat(nums[n-2])||0.01, ft: parseFloat(nums[n-1])||0.01 };
+        break;
+      }
+      case 'IFCAXIS2PLACEMENT2D': { const r = R(p); ap2d[id] = { loc: r[0] ?? null, ref: r[1] ?? null }; break; }
+      case 'IFCREVOLVEDAREASOLID': {
+        const r = R(p);
+        const pNoRefs = p.replace(/#\d+/g, '');
+        const nums = pNoRefs.match(/[+-]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?/g) || [];
+        const angle = parseFloat(nums[nums.length - 1]) || (Math.PI * 2);
+        if (r[0] != null) revolvedSolids[id] = { profileId: r[0], posId: r[1] ?? null, axis1Id: r[2] ?? null, angle };
+        break;
+      }
+      case 'IFCSWEPTDISKSOLID': {
+        const r = R(p);
+        const pNoRefs = p.replace(/#\d+/g, '');
+        const nums = pNoRefs.match(/[+-]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?/g) || [];
+        if (r[0] != null) sweptDisks[id] = { directrixId: r[0], radius: parseFloat(nums[0]) || 0.05 };
+        break;
+      }
+      case 'IFCCARTESIANPOINTLIST2D': {
+        // ((pt1),(pt2),...) — extract all number pairs
+        const nums = p.match(/([-\d.eE+]+)/g) || [];
+        const arr = [];
+        for (let i = 0; i + 1 < nums.length; i += 2) arr.push([+nums[i], +nums[i+1]]);
+        cartPtLists2D[id] = arr;
+        break;
+      }
+      case 'IFCINDEXEDPOLYCURVE': {
+        // (PointList, Segments, SelfIntersect) — first ref = point list
+        const r = R(p);
+        indexedPolyCurves[id] = { listId: r[0] ?? null };
+        break;
+      }
+      // Color chain
+      case 'IFCCOLOURRGB': {
+        const nums = p.match(/([\d.eE+\-]+)/g) || [];
+        colours[id] = [parseFloat(nums[nums.length-3])||0, parseFloat(nums[nums.length-2])||0, parseFloat(nums[nums.length-1])||0];
+        break;
+      }
+      case 'IFCSURFACESTYLERENDERING': {
+        const r = R(p); const m = p.match(/#\d+\s*,\s*([\d.eE+\-]+)/);
+        renderings[id] = { colourId: r[0] ?? null, transparency: m ? parseFloat(m[1]) : 0 };
+        break;
+      }
+      case 'IFCSURFACESTYLE': { surfStyles[id] = R(p); break; }
+      case 'IFCPRESENTATIONSTYLEASSIGNMENT': { styleAssigns[id] = R(p); break; }
+      case 'IFCSTYLEDITEM': {
+        const r = R(p); const hasItem = p.trimStart().startsWith('#');
+        const itemId = hasItem ? r[0] : null; const styleRefs = hasItem ? r.slice(1) : r;
+        for (const sid of styleRefs) styledItems.push({ itemId, assignId: sid });
+        break;
+      }
+      case 'IFCRELASSOCIATESMATERIAL': {
+        const r = R(p); if (r.length >= 2) relAssocMat.push({ productIds: r.slice(1, -1), materialId: r[r.length-1] });
+        break;
+      }
+      case 'IFCRELDEFINESBYTYPE': {
+        const r = R(p); if (r.length >= 2) relDefByType.push({ productIds: r.slice(1, -1), typeId: r[r.length-1] });
+        break;
+      }
+      case 'IFCBOUNDINGBOX': {
+        // Corner point + X/Y/Z dims: IFCBOUNDINGBOX(#corner, xDim, yDim, zDim)
+        const r = R(p); const nums = p.match(/([\d.eE+\-]+)/g) || [];
+        if (r[0] != null && nums.length >= 3) {
+          const xd = +nums[nums.length-3], yd = +nums[nums.length-2], zd = +nums[nums.length-1];
+          boolOps[id] = { type: 'bbox', cornerId: r[0], xd, yd, zd }; // reuse boolOps as scratch
+        }
+        break;
+      }
+      // v1.9.0: void element relationships for CSG
+      case 'IFCRELVOIDSELEMENT': {
+        // (GUID, OwnerHistory, Name, Description, RelatingBuildingElement, RelatedOpeningElement)
+        const r = R(p);
+        // r[0]=OwnerHistory(ref), r[1]=BuildingElement(ref), r[2]=OpeningElement(ref)
+        if (r.length >= 3) relVoids.push({ elementId: r[1], openingId: r[2] });
+        break;
+      }
+
+      // IFC4 polygon face sets
+      case 'IFCCARTESIANPOINTLIST3D': {
+        const nums = p.match(/([-\d.eE+]+)/g) || [];
+        const arr = [];
+        for (let i = 0; i + 2 < nums.length; i += 3) arr.push([+nums[i], +nums[i+1], +nums[i+2]]);
+        cartPtLists3D[id] = arr; break;
+      }
+      case 'IFCINDEXEDPOLYGONALFACE': {
+        const nums = p.match(/\d+/g) || [];
+        indexedPolyFaces[id] = nums.map(Number); break;
+      }
+      case 'IFCPOLYGONALFACESET': {
+        const r = R(p);
+        polyFaceSets[id] = { listId: r[0] ?? null, faceIds: r.slice(1) }; break;
+      }
+      case 'IFCTRIANGULATEDFACESET': {
+        const r = R(p);
+        const allNums = p.match(/\d+/g) || [];
+        const tris = [];
+        for (let i = 3; i + 2 < allNums.length; i += 3)
+          tris.push([+allNums[i], +allNums[i+1], +allNums[i+2]]);
+        triFaceSets[id] = { listId: r[0] ?? null, triangles: tris }; break;
+      }
+
+      default:
+        if (PRODUCT_TYPES.has(type)) {
+          const nameM = p.match(/'([^']*)'/);
+          products[id] = {
+            id, type,
+            name: nameM ? nameM[1] : '',
+            lpId: null,   // resolved below after all entities parsed
+            pdsId: null   // resolved below
+          };
+          // Store raw params for two-pass resolution
+          productParams[id] = p;
+        }
+    }
+  }
+
+  // ── Two-pass: resolve lpId + pdsId using stored productParams ──
+  for (const [idStr, prod] of Object.entries(products)) {
+    const r = R(productParams[+idStr] || '');
+    prod.lpId  = r.find(x => lpl[x]  !== undefined) ?? null;
+    prod.pdsId = r.find(x => pds[x]  !== undefined) ?? null;
+  }
+
+  setProgress(40); setSub('Bygger färgkarta...');
+  await sleep(0);
+
+  // ── Color resolution ──────────────────────────────────────────────────────
+  const itemColor = {}, productColor = {};
+
+  // surfStyle → rendering → colour
+  const ssToRgba = {};
+  for (const [sid, refs] of Object.entries(surfStyles)) {
+    for (const ref of refs) {
+      const rnd = renderings[ref];
+      if (rnd) {
+        const col = colours[rnd.colourId];
+        if (col) ssToRgba[sid] = { r: col[0], g: col[1], b: col[2], a: 1 - rnd.transparency };
+      }
+    }
+  }
+
+  // styledItems → itemColor
+  for (const si of styledItems) {
+    let rgba = null;
+    const assign = styleAssigns[si.assignId];
+    if (assign) {
+      for (const ref of assign) {
+        const ss = ssToRgba[ref];
+        if (ss) { rgba = ss; break; }
+      }
+    } else {
+      rgba = ssToRgba[si.assignId];
+    }
+    if (rgba && si.itemId != null) itemColor[si.itemId] = rgba;
+  }
+
+  // product → shape → representation items → itemColor
+  const shapeToProduct = {};
+  for (const [pid, prod] of Object.entries(products)) {
+    if (prod.shapeId != null) shapeToProduct[prod.shapeId] = +pid;
+  }
+
+  setProgress(50); setSub('Budgeterar mesh...');
+  await sleep(0);
+
+  // v1.1.0: Ta bort hård filstorleksgräns — ladda alla produkter upp till 20 000 mesh.
+  // Quest 3 klarar ~15–20k Lambert-mesh utan problem för normala byggprojekt.
+  const MESH_BUDGET = 20000;
+  const LARGE_FILE = false; // Tillåt alltid full geometri (inga BoundingBox-fallbacks)
+  let meshCount = 0;
+
+  const fileObj = {
+    id: nextFileId++, name: filename, discipline: disc, meshes: [], visible: true
+  };
+  loadedFiles.push(fileObj);
+
+  setProgress(55); setSub('Bygger 3D-geometri...');
+  await sleep(15);
+
+  // ── Build meshes for each product ─────────────────────────────────────────
+  const instanceBuckets = new Map(); // bucketKey → {repMapId,apId,repId,rgba,disc,type,instances[]}
+  const rmGeoCache = new Map();      // repMapId → canonical BufferGeometry (identity transform)
+  const INSTANCE_MIN = 2;
+  let built = 0;
+  const productList = Object.values(products);
+
+  for (let pi = 0; pi < productList.length; pi++) {
+    if (pi % 200 === 0) {
+      setProgress(55 + 40 * (pi / productList.length));
+      await sleep(0);
+    }
+    if (meshCount >= MESH_BUDGET) break; // Budget limit
+
+    const prod = productList[pi];
+    if (!prod.pdsId) continue;
+
+    // Skip IFCSPACE in VR by default (too many, clutters view)
+    if (prod.type === 'IFCSPACE') continue;
+
+    // Get world matrix
+    const worldMat = getLocalMat(prod.lpId, lpl, ap3d, pts, dirs);
+
+    // Get product color — try itemColor on the rep items first, then productColor
+    let rgba = productColor[prod.id] || null;
+
+    // Resolve shape → representations
+    const shape = pds[prod.pdsId];
+    if (!shape) continue;
+
+    // Traverse shape representations
+    const repIds = shape;
+    for (const repId of repIds) {
+      const repIdStr = shRepId[repId];
+      // Only 'Body' or null/empty representations
+      // v1.2.0: MappedRepresentation + Tessellation (V057 ventilation)
+      // v1.7.0: SurfaceModel tillagd (V157: IFCSHELLBASEDSURFACEMODEL)
+      if (repIdStr && !['Body', 'Facetation', 'SolidModel', 'Brep', 'CSG', 'Clipping',
+          'SweptSolid', 'AdvancedSweptSolid', 'BoundingBox',
+          'MappedRepresentation', 'Tessellation', 'SurfaceModel'].includes(repIdStr)) continue;
+
+      const repItems = shReps[repId] || [];
+
+      // Try to find color from itemColor (IFCSTYLEDITEM → IFCSURFACESTYLE chain)
+      if (!rgba) {
+        for (const itemId of repItems) {
+          if (itemColor[itemId]) { rgba = itemColor[itemId]; break; }
+        }
+      }
+
+      // Instancing: collect all-IFCMAPPEDITEM reps into buckets for the build pass below
+      if (repItems.length > 0 && repItems.every(id => mapItems[id])) {
+        for (const itemId of repItems) {
+          const mi = mapItems[itemId];
+          if (!mi) continue;
+          const rm = repMaps[mi.repMapId];
+          if (!rm) continue;
+          const colorKey = rgba
+            ? `${Math.round(rgba.r*255)},${Math.round(rgba.g*255)},${Math.round(rgba.b*255)},${rgba.a.toFixed(2)}`
+            : (TYPE_COLORS[prod.type] || DISCIPLINES[disc]?.color || '#94a3b8');
+          const bucketKey = `${mi.repMapId}|${colorKey}`;
+          if (!instanceBuckets.has(bucketKey)) {
+            instanceBuckets.set(bucketKey, { repMapId: mi.repMapId, apId: rm.apId, repId: rm.repId,
+              rgba, disc, type: prod.type, instances: [] });
+          }
+          instanceBuckets.get(bucketKey).instances.push({ worldMat, transformId: mi.transformId });
+        }
+        break; // done with this product — skip buildGeometryFromItems
+      }
+
+      // Large files: skip heavy FacetedBrep/PolygonalFaceSet geometry — use BoundingBox rep instead
+      let geoBuf;
+      if (LARGE_FILE && repIdStr !== 'BoundingBox') {
+        // Check if rep items are all heavy types — if so, prefer BoundingBox rep
+        const allHeavy = repItems.every(id => fbreps[id] || polyFaceSets[id] || triFaceSets[id] || shells[id] || shellModels[id]);
+        if (allHeavy) {
+          geoBuf = null; // will try BoundingBox rep in next iteration
+          continue;
+        }
+      }
+
+      geoBuf = buildGeometryFromItems(
+        repItems, worldMat, rgba, prod,
+        { pts, dirs, ap3d, lpl, loops, fbnd, faces, shells, repMaps, mapItems,
+          shReps, ctops, extrudes, profiles, fbreps, sweptDisks,
+          cartPtLists3D, indexedPolyFaces, polyFaceSets, triFaceSets,
+          cartPtLists2D, indexedPolyCurves, polylines,
+          itemColor, boolOps, shellModels, revolvedSolids, ap2d }
+      );
+
+      if (geoBuf && geoBuf.attributes.position?.count > 0) {
+        const col = rgba
+          ? new THREE.Color(rgba.r, rgba.g, rgba.b)
+          : new THREE.Color(TYPE_COLORS[prod.type] || DISCIPLINES[disc]?.color || '#94a3b8');
+
+        // Quest 3: use MeshLambertMaterial (cheaper than Standard/Phong)
+        const mat = new THREE.MeshLambertMaterial({
+          color: col,
+          transparent: rgba && rgba.a < 0.99,
+          opacity: rgba ? rgba.a : 1,
+          side: THREE.DoubleSide
+        });
+
+        const mesh = new THREE.Mesh(geoBuf, mat);
+        mesh.userData = {
+          type: prod.type,
+          name: prod.name,
+          discipline: disc,
+          fileId: fileObj.id,
+          prodId: prod.id
+        };
+        mesh.visible = disciplineVisible[disc] !== false;
+        ifcRoot.add(mesh);
+        const key = `f${fileObj.id}_p${prod.id}`;
+        meshMap[key] = mesh;
+        fileObj.meshes.push(mesh);
+        meshCount++;
+        built++;
+
+        // Expand model box
+        geoBuf.computeBoundingBox();
+        if (geoBuf.boundingBox) {
+          const b = geoBuf.boundingBox.clone().applyMatrix4(mesh.matrixWorld).applyMatrix4(ifcRoot.matrixWorld);
+          modelBox.union(b);
+        }
+        break; // one mesh per product
+      }
+    }
+  }
+
+  // ── InstancedMesh build pass ──────────────────────────────────────────────
+  const US_INST = UNIT_SCALE;
+  for (const [, bucket] of instanceBuckets) {
+    const { repMapId, apId, repId, rgba: bRgba, disc: bDisc, type: bType, instances } = bucket;
+    if (instances.length === 0 || meshCount >= MESH_BUDGET) continue;
+
+    // Build or reuse canonical geometry at identity transform
+    let canonGeo = rmGeoCache.get(repMapId);
+    if (!canonGeo) {
+      const subItems = shReps[repId] || [];
+      canonGeo = buildGeometryFromItems(
+        subItems, new THREE.Matrix4(), bRgba, { type: bType, name: '' },
+        { pts, dirs, ap3d, lpl, loops, fbnd, faces, shells, repMaps, mapItems,
+          shReps, ctops, extrudes, profiles, fbreps, sweptDisks,
+          cartPtLists3D, indexedPolyFaces, polyFaceSets, triFaceSets,
+          cartPtLists2D, indexedPolyCurves, polylines,
+          itemColor, boolOps, shellModels, revolvedSolids, ap2d }
+      );
+      if (canonGeo) rmGeoCache.set(repMapId, canonGeo);
+    }
+    if (!canonGeo || !canonGeo.attributes.position || canonGeo.attributes.position.count === 0) continue;
+
+    const col = bRgba
+      ? new THREE.Color(bRgba.r, bRgba.g, bRgba.b)
+      : new THREE.Color(TYPE_COLORS[bType] || DISCIPLINES[bDisc]?.color || '#94a3b8');
+    const bMat = new THREE.MeshLambertMaterial({
+      color: col,
+      transparent: bRgba && bRgba.a < 0.99,
+      opacity: bRgba ? bRgba.a : 1,
+      side: THREE.DoubleSide
+    });
+
+    // apMat is the same for all instances (tied to the RepresentationMap)
+    const apMat = apId != null ? buildAP3DMatrix(ap3d[apId], pts, dirs) : new THREE.Matrix4();
+
+    if (instances.length >= INSTANCE_MIN) {
+      const im = new THREE.InstancedMesh(canonGeo, bMat, instances.length);
+      im.userData = { type: bType, name: bType, discipline: bDisc, fileId: fileObj.id, isInstanced: true };
+      im.visible = disciplineVisible[bDisc] !== false;
+      for (let i = 0; i < instances.length; i++) {
+        const inst = instances[i];
+        let instMat = inst.worldMat.clone().multiply(apMat);
+        if (inst.transformId != null && ctops[inst.transformId]) {
+          instMat = applyCTOP(instMat, ctops[inst.transformId], pts, dirs);
+        }
+        // Convert translation from IFC mm to Three.js metres
+        instMat.elements[12] *= US_INST;
+        instMat.elements[13] *= US_INST;
+        instMat.elements[14] *= US_INST;
+        im.setMatrixAt(i, instMat);
+      }
+      im.instanceMatrix.needsUpdate = true;
+      ifcRoot.add(im);
+      fileObj.meshes.push(im);
+      meshCount += instances.length;
+      built += instances.length;
+    } else {
+      // Singleton: fall back to regular Mesh with full transform baked in
+      for (const inst of instances) {
+        let singleMat = inst.worldMat.clone().multiply(apMat);
+        if (inst.transformId != null && ctops[inst.transformId]) {
+          singleMat = applyCTOP(singleMat, ctops[inst.transformId], pts, dirs);
+        }
+        const subItems = shReps[repId] || [];
+        const geoBuf = buildGeometryFromItems(
+          subItems, singleMat, bRgba, { type: bType, name: '' },
+          { pts, dirs, ap3d, lpl, loops, fbnd, faces, shells, repMaps, mapItems,
+            shReps, ctops, extrudes, profiles, fbreps, sweptDisks,
+            cartPtLists3D, indexedPolyFaces, polyFaceSets, triFaceSets,
+            cartPtLists2D, indexedPolyCurves, polylines,
+            itemColor, boolOps, shellModels, revolvedSolids, ap2d }
+        );
+        if (!geoBuf || !geoBuf.attributes.position || geoBuf.attributes.position.count === 0) continue;
+        const mesh = new THREE.Mesh(geoBuf, bMat.clone());
+        mesh.userData = { type: bType, name: '', discipline: bDisc, fileId: fileObj.id };
+        mesh.visible = disciplineVisible[bDisc] !== false;
+        ifcRoot.add(mesh);
+        fileObj.meshes.push(mesh);
+        meshCount++;
+        built++;
+      }
+    }
+  }
+
+  // ── CSG subtraction pass (v1.9.0) ─────────────────────────────────────────
+  if (relVoids.length > 0) {
+    setProgress(97); setSub('Håltagningar...');
+    await sleep(0);
+
+    // Build lookup: productId → [mesh, ...]  (only regular Mesh, not InstancedMesh)
+    const prodMeshes = {};
+    for (const m of fileObj.meshes) {
+      if (!m.isInstancedMesh && m.userData?.prodId != null) {
+        const pid = m.userData.prodId;
+        (prodMeshes[pid] = prodMeshes[pid] || []).push(m);
+      }
+    }
+
+    const csgTarget = new Set([
+      'IFCWALL','IFCWALLSTANDARDCASE','IFCSLAB','IFCROOF','IFCPLATE','IFCCOLUMN','IFCBEAM'
+    ]);
+
+    // Build opening geometry in opening-local IFC space (positions already in meters via US)
+    function buildOpeningGeo(openingProdId) {
+      const prod = products[openingProdId];
+      if (!prod || prod.pdsId == null) return null;
+      for (const srId of (pds[prod.pdsId] || [])) {
+        const rid = shRepId[srId];
+        if (rid && rid !== 'Body' && rid !== 'Facetation' && rid !== 'SolidModel') continue;
+        const repItems = shReps[srId] || [];
+        if (repItems.length === 0) continue;
+        const geo = buildGeometryFromItems(
+          repItems, new THREE.Matrix4(), null, { type: prod.type, name: '' },
+          { pts, dirs, ap3d, lpl, loops, fbnd, faces, shells, repMaps, mapItems,
+            shReps, ctops, extrudes, profiles, fbreps, sweptDisks,
+            cartPtLists3D, indexedPolyFaces, polyFaceSets, triFaceSets,
+            cartPtLists2D, indexedPolyCurves, polylines,
+            itemColor, boolOps, shellModels, revolvedSolids, ap2d }
+        );
+        if (geo && geo.attributes.position?.count > 0) return geo;
+      }
+      return null;
+    }
+
+    for (const rv of relVoids) {
+      const { elementId, openingId } = rv;
+      const elemProd = products[elementId];
+      if (!elemProd || !csgTarget.has(elemProd.type)) continue;
+      const meshes = prodMeshes[elementId];
+      if (!meshes || meshes.length === 0) continue;
+
+      // Build cutter in opening-local space (meters), then transform to IFC world space
+      const cutterLocalGeo = buildOpeningGeo(openingId);
+      if (!cutterLocalGeo) continue;
+
+      const openingProd = products[openingId];
+      const openingWorldMat = getLocalMat(openingProd?.lpId ?? null, lpl, ap3d, pts, dirs);
+      // Translate from IFC mm to meters (rotation/scale parts are dimensionless)
+      openingWorldMat.elements[12] *= US;
+      openingWorldMat.elements[13] *= US;
+      openingWorldMat.elements[14] *= US;
+
+      const cutterWorldGeo = cutterLocalGeo.clone();
+      cutterWorldGeo.applyMatrix4(openingWorldMat);
+      cutterWorldGeo.computeBoundingBox();
+      const cutterBB = cutterWorldGeo.boundingBox.clone().expandByScalar(0.05);
+
+      for (const mesh of meshes) {
+        if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+        if (!mesh.geometry.boundingBox.intersectsBox(cutterBB)) continue;
+        const result = csgSubtract(mesh.geometry, cutterWorldGeo);
+        if (result !== mesh.geometry) {
+          mesh.geometry.dispose();
+          mesh.geometry = result;
+          mesh.geometry.computeBoundingBox();
+        }
+      }
+    }
+  }
+
+  setProgress(98); setSub(`Byggde ${built} mesh`);
+  await sleep(50);
+
+  // v1.11.x: Centre model at world origin so VR player spawns next to it.
+  // Real-world IFC files (Sweref99 etc.) have coordinates in the 100 000s of
+  // metres — without this the player rig ends up kilometres away.
+  ifcRoot.updateMatrixWorld(true);
+  const _cbox = computeSceneBox();
+  if (!_cbox.isEmpty()) {
+    const _cc = new THREE.Vector3();
+    _cbox.getCenter(_cc);
+    ifcRoot.position.x -= _cc.x;
+    ifcRoot.position.z -= _cc.z;
+    ifcRoot.position.y -= _cbox.min.y;   // floor at y=0
+    ifcRoot.updateMatrixWorld(true);
+  }
+
+  updateDisciplinePanelUI();
+}
+
+// ── GEOMETRY BUILDER ──────────────────────────────────────────────────────────
+function buildGeometryFromItems(itemIds, worldMat, rgba, prod, maps) {
+  const { pts, dirs, ap3d, lpl, loops, fbnd, faces, shells, repMaps, mapItems,
+    shReps, ctops, extrudes, profiles, fbreps, sweptDisks,
+    cartPtLists3D, indexedPolyFaces, polyFaceSets, triFaceSets,
+    cartPtLists2D, indexedPolyCurves, polylines,
+    itemColor, boolOps, shellModels, revolvedSolids, ap2d } = maps;
+
+  const US = UNIT_SCALE;
+  const allPos = [], allIdx = [];
+  let vertOffset = 0;
+
+  function addTriangle(ax, ay, az, bx, by, bz, cx, cy, cz) {
+    const b = vertOffset;
+    allPos.push(ax, ay, az, bx, by, bz, cx, cy, cz);
+    allIdx.push(b, b + 1, b + 2);
+    vertOffset += 3;
+  }
+
+  function addFace(verts) { // verts = [[x,y,z],...] in world space (IFC Z-up units)
+    if (verts.length < 3) return;
+    for (let i = 1; i < verts.length - 1; i++) {
+      addTriangle(
+        verts[0][0] * US, verts[0][1] * US, verts[0][2] * US,
+        verts[i][0] * US, verts[i][1] * US, verts[i][2] * US,
+        verts[i+1][0] * US, verts[i+1][1] * US, verts[i+1][2] * US
+      );
+    }
+  }
+
+  function applyMatrix4ToVert(mat, x, y, z) {
+    const e = mat.elements;
+    return [
+      e[0]*x + e[4]*y + e[8]*z  + e[12],
+      e[1]*x + e[5]*y + e[9]*z  + e[13],
+      e[2]*x + e[6]*y + e[10]*z + e[14]
+    ];
+  }
+
+  function processShell(shellId, mat) {
+    const faceIds = shells[shellId];
+    if (!faceIds) return;
+    for (const faceId of faceIds) {
+      const boundIds = faces[faceId];
+      if (!boundIds) continue;
+      for (const boundId of boundIds) {
+        const bnd = fbnd[boundId];
+        if (!bnd) continue;
+        const loopPtIds = loops[bnd.loopId];
+        if (!loopPtIds) continue;
+        const verts = loopPtIds.map(ptId => {
+          const p = pts[ptId] || [0, 0, 0];
+          return applyMatrix4ToVert(mat, p[0], p[1], p[2]);
+        });
+        if (!bnd.outer) continue; // skip inner (holes) — POC
+        addFace(verts);
+      }
+    }
+  }
+
+  function processExtrude(extrudeId, mat) {
+    const ext = extrudes[extrudeId];
+    if (!ext) return;
+    // Build local placement matrix for the solid (position within product space)
+    const localMat = ext.posId != null ? buildAP3DMatrix(ap3d[ext.posId], pts, dirs) : new THREE.Matrix4();
+    // combined = world * local  (all still in IFC native units, Z-up mm)
+    const combined = mat.clone().multiply(localMat);
+
+    const extDir = ext.dirId != null ? (dirs[ext.dirId] || [0, 0, 1]) : [0, 0, 1];
+
+    const profilePts = resolveProfile(ext.profileId, profiles, pts, dirs, ap3d, cartPtLists2D, indexedPolyCurves, polylines);
+    if (!profilePts || profilePts.length < 3) return;
+
+    // Profile pts are in 2D (X,Y) profile-local space.
+    // Transform each to world IFC-space via combined, then addFace applies * US.
+    const bot = profilePts.map(([x, y]) => applyMatrix4ToVert(combined, x, y, 0));
+
+    // Extrusion offset vector in world IFC-space
+    const o0  = applyMatrix4ToVert(combined, 0, 0, 0);
+    const oD  = applyMatrix4ToVert(combined, extDir[0]*ext.depth, extDir[1]*ext.depth, extDir[2]*ext.depth);
+    const ex = oD[0]-o0[0], ey = oD[1]-o0[1], ez = oD[2]-o0[2];
+
+    const top = bot.map(([x, y, z]) => [x+ex, y+ey, z+ez]);
+
+    // Bottom cap (reversed winding for correct normal)
+    for (let i = 1; i < bot.length - 1; i++) {
+      addFace([bot[0], bot[i+1], bot[i]]);
+    }
+    // Top cap
+    for (let i = 1; i < top.length - 1; i++) {
+      addFace([top[0], top[i], top[i+1]]);
+    }
+    // Side quads
+    for (let i = 0; i < bot.length; i++) {
+      const j = (i + 1) % bot.length;
+      addFace([bot[i], bot[j], top[j], top[i]]);
+    }
+  }
+
+  function processSweptDisk(sdId, mat) {
+    const sd = sweptDisks[sdId];
+    if (!sd) return;
+    const radius = sd.radius * US;
+    const SEGS = 16; // v1.1.0: Höjt från 6 → 16 för runda rör
+    const directrixPts = resolveDirectrix(sd.directrixId, pts, loops);
+    if (!directrixPts || directrixPts.length < 2) return;
+
+    for (let i = 0; i < directrixPts.length - 1; i++) {
+      const p0 = directrixPts[i], p1 = directrixPts[i + 1];
+      const [ax, ay, az] = applyMatrix4ToVert(mat, p0[0], p0[1], p0[2]);
+      const [bx, by, bz] = applyMatrix4ToVert(mat, p1[0], p1[1], p1[2]);
+      const A = new THREE.Vector3(ax*US, ay*US, az*US);
+      const B = new THREE.Vector3(bx*US, by*US, bz*US);
+      const fwd = B.clone().sub(A).normalize();
+      let up = new THREE.Vector3(0, 1, 0);
+      if (Math.abs(fwd.dot(up)) > 0.99) up.set(1, 0, 0);
+      const right = new THREE.Vector3().crossVectors(fwd, up).normalize();
+      const realUp = new THREE.Vector3().crossVectors(right, fwd).normalize();
+
+      const circA = [], circB = [];
+      for (let s = 0; s < SEGS; s++) {
+        const ang = (s / SEGS) * Math.PI * 2;
+        const cos = Math.cos(ang), sin = Math.sin(ang);
+        circA.push([
+          A.x + right.x * cos * radius + realUp.x * sin * radius,
+          A.y + right.y * cos * radius + realUp.y * sin * radius,
+          A.z + right.z * cos * radius + realUp.z * sin * radius
+        ]);
+        circB.push([
+          B.x + right.x * cos * radius + realUp.x * sin * radius,
+          B.y + right.y * cos * radius + realUp.y * sin * radius,
+          B.z + right.z * cos * radius + realUp.z * sin * radius
+        ]);
+      }
+      for (let s = 0; s < SEGS; s++) {
+        const ns = (s + 1) % SEGS;
+        addTriangle(circA[s][0],circA[s][1],circA[s][2], circB[s][0],circB[s][1],circB[s][2], circB[ns][0],circB[ns][1],circB[ns][2]);
+        addTriangle(circA[s][0],circA[s][1],circA[s][2], circB[ns][0],circB[ns][1],circB[ns][2], circA[ns][0],circA[ns][1],circA[ns][2]);
+      }
+    }
+  }
+
+  function processPolyFaceSet(pfsId, mat) {
+    const pfs = polyFaceSets[pfsId];
+    if (!pfs) return;
+    const ptList = cartPtLists3D[pfs.listId];
+    if (!ptList) return;
+    for (const faceId of pfs.faceIds) {
+      const face = indexedPolyFaces[faceId];
+      if (!face || face.length < 3) continue;
+      const verts = face.map(idx => {
+        const p = ptList[idx - 1] || [0, 0, 0];
+        return applyMatrix4ToVert(mat, p[0], p[1], p[2]);
+      });
+      addFace(verts);
+    }
+  }
+
+  function processTriFaceSet(tfsId, mat) {
+    const tfs = triFaceSets[tfsId];
+    if (!tfs) return;
+    const ptList = cartPtLists3D[tfs.listId];
+    if (!ptList) return;
+    for (const tri of tfs.triangles) {
+      const a = ptList[tri[0]-1]||[0,0,0], b = ptList[tri[1]-1]||[0,0,0], c = ptList[tri[2]-1]||[0,0,0];
+      const wa = applyMatrix4ToVert(mat, a[0], a[1], a[2]);
+      const wb = applyMatrix4ToVert(mat, b[0], b[1], b[2]);
+      const wc = applyMatrix4ToVert(mat, c[0], c[1], c[2]);
+      addTriangle(wa[0]*US,wa[1]*US,wa[2]*US, wb[0]*US,wb[1]*US,wb[2]*US, wc[0]*US,wc[1]*US,wc[2]*US);
+    }
+  }
+
+  function processRevolved(revId, mat) {
+    const rev = revolvedSolids[revId];
+    if (!rev) return;
+    const prof = profiles[rev.profileId];
+    if (!prof) return;
+
+    let profile2d;
+    if (prof.type === 'circle') {
+      // Apply 2D placement center (IFCAXIS2PLACEMENT2D → loc in IFC mm)
+      let cx = 0, cy = 0;
+      if (prof.posId != null && ap2d[prof.posId]) {
+        const loc2d = pts[ap2d[prof.posId].loc];
+        if (loc2d) { cx = loc2d[0]; cy = loc2d[1]; }
+      }
+      const r = prof.radius;
+      profile2d = Array.from({ length: 16 }, (_, i) => {
+        const a = (i / 16) * Math.PI * 2;
+        return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+      });
+    } else {
+      profile2d = resolveProfile(rev.profileId, profiles, pts, dirs, ap3d,
+        cartPtLists2D, indexedPolyCurves, polylines);
+    }
+    if (!profile2d || profile2d.length < 2) return;
+
+    // Build lathe points (x = radius from Y-axis, must be ≥ 0)
+    const lathePoints = [];
+    for (let i = 0; i < profile2d.length; i++) {
+      const [x, y] = profile2d[i];
+      if (x < -1e-6) continue;
+      if (i === profile2d.length - 1) {
+        const [x0, y0] = profile2d[0];
+        if (Math.abs(x - x0) < 1e-9 && Math.abs(y - y0) < 1e-9) continue;
+      }
+      lathePoints.push(new THREE.Vector2(Math.max(x, 0), y));
+    }
+    if (lathePoints.length < 2) return;
+
+    // posId: AXIS2PLACEMENT3D places the solid in product local space (IFC mm)
+    const posMat = rev.posId != null ? buildAP3DMatrix(ap3d[rev.posId], pts, dirs) : new THREE.Matrix4();
+    const combined = mat.clone().multiply(posMat);
+
+    let geo;
+    try { geo = new THREE.LatheGeometry(lathePoints, 24, 0, rev.angle); }
+    catch (e) { return; }
+
+    const posArr = geo.attributes.position.array;
+    const idxArr = geo.index ? geo.index.array : null;
+    if (idxArr) {
+      for (let i = 0; i < idxArr.length; i += 3) {
+        const a = idxArr[i], b = idxArr[i + 1], c = idxArr[i + 2];
+        const wa = applyMatrix4ToVert(combined, posArr[a*3], posArr[a*3+1], posArr[a*3+2]);
+        const wb = applyMatrix4ToVert(combined, posArr[b*3], posArr[b*3+1], posArr[b*3+2]);
+        const wc = applyMatrix4ToVert(combined, posArr[c*3], posArr[c*3+1], posArr[c*3+2]);
+        addTriangle(wa[0]*US, wa[1]*US, wa[2]*US, wb[0]*US, wb[1]*US, wb[2]*US, wc[0]*US, wc[1]*US, wc[2]*US);
+      }
+    } else {
+      for (let i = 0; i < posArr.length / 9; i++) {
+        const wa = applyMatrix4ToVert(combined, posArr[i*9],   posArr[i*9+1], posArr[i*9+2]);
+        const wb = applyMatrix4ToVert(combined, posArr[i*9+3], posArr[i*9+4], posArr[i*9+5]);
+        const wc = applyMatrix4ToVert(combined, posArr[i*9+6], posArr[i*9+7], posArr[i*9+8]);
+        addTriangle(wa[0]*US, wa[1]*US, wa[2]*US, wb[0]*US, wb[1]*US, wb[2]*US, wc[0]*US, wc[1]*US, wc[2]*US);
+      }
+    }
+    geo.dispose();
+  }
+
+  function processItem(itemId, mat) {
+    // MappedItem
+    if (mapItems[itemId]) {
+      const mi = mapItems[itemId];
+      const rm = repMaps[mi.repMapId];
+      if (rm) {
+        const apMat = rm.apId != null ? buildAP3DMatrix(ap3d[rm.apId], pts, dirs) : new THREE.Matrix4();
+        let tMat = mat.clone().multiply(apMat);
+        if (mi.transformId != null && ctops[mi.transformId]) tMat = applyCTOP(tMat, ctops[mi.transformId], pts, dirs);
+        const subItems = shReps[rm.repId] || [];
+        for (const sub of subItems) processItem(sub, tMat);
+      }
+      return;
+    }
+    // Shell-based
+    if (shells[itemId]) { processShell(itemId, mat); return; }
+    // ShellBasedSurfaceModel — v1.7.0: wrapper around IFCOPENSHELL
+    if (shellModels[itemId] != null) { processShell(shellModels[itemId], mat); return; }
+    // FacetedBrep
+    if (fbreps[itemId] !== undefined) { processShell(fbreps[itemId], mat); return; }
+    // ExtrudedAreaSolid
+    if (extrudes[itemId]) { processExtrude(itemId, mat); return; }
+    // SweptDisk
+    if (sweptDisks[itemId]) { processSweptDisk(itemId, mat); return; }
+    // RevolvedAreaSolid (v1.10.0: pipe elbows)
+    if (revolvedSolids[itemId]) { processRevolved(itemId, mat); return; }
+    // PolygonalFaceSet
+    if (polyFaceSets[itemId]) { processPolyFaceSet(itemId, mat); return; }
+    // TriangulatedFaceSet
+    if (triFaceSets[itemId]) { processTriFaceSet(itemId, mat); return; }
+    // BoundingBox — draw a simple box (large-file fallback)
+    if (boolOps && boolOps[itemId] && boolOps[itemId].type === 'bbox') {
+      const bb = boolOps[itemId];
+      const corner = pts[bb.cornerId] || [0,0,0];
+      const cx = corner[0], cy = corner[1], cz = corner[2];
+      const xd = bb.xd, yd = bb.yd, zd = bb.zd;
+      const corners = [
+        [cx,cy,cz],[cx+xd,cy,cz],[cx+xd,cy+yd,cz],[cx,cy+yd,cz],
+        [cx,cy,cz+zd],[cx+xd,cy,cz+zd],[cx+xd,cy+yd,cz+zd],[cx,cy+yd,cz+zd]
+      ].map(v => applyMatrix4ToVert(mat, v[0], v[1], v[2]));
+      const faces6 = [[0,1,2,3],[4,7,6,5],[0,4,5,1],[2,6,7,3],[0,3,7,4],[1,5,6,2]];
+      for (const f of faces6) addFace(f.map(i=>corners[i]));
+    }
+  }
+
+  for (const itemId of itemIds) {
+    processItem(itemId, worldMat);
+  }
+
+  if (allPos.length === 0) return null;
+
+  // v1.1.0: Deduplicera vertices → smooth shading.
+  // Nuvarande builder skapar separata vertices per triangel (unshared). Det ger flat
+  // shading eftersom computeVertexNormals() inte kan interpolera normals över kanter.
+  // Vi deduplicerar med en HashMap keyed på kvantiserade koordinater (0.1mm precision).
+  const QUANT = 1e4; // 0.1 mm precision vid meter-skala
+  const vertMap = new Map();
+  const newPos = [];
+  const newIdx = [];
+  for (let i = 0; i < allIdx.length; i++) {
+    const vi = allIdx[i];
+    const x = allPos[vi*3], y = allPos[vi*3+1], z = allPos[vi*3+2];
+    const key = `${Math.round(x*QUANT)},${Math.round(y*QUANT)},${Math.round(z*QUANT)}`;
+    let ni = vertMap.get(key);
+    if (ni === undefined) {
+      ni = newPos.length / 3;
+      vertMap.set(key, ni);
+      newPos.push(x, y, z);
+    }
+    newIdx.push(ni);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(newPos), 3));
+  geo.setIndex(newIdx);
+  geo.computeVertexNormals(); // Nu korrekt — vertices delas över kanter
+  return geo;
+}
+
+// ── PROFILE RESOLVER ──────────────────────────────────────────────────────────
+function resolveProfile(profileId, profiles, pts, dirs, ap3d, cartPtLists2D, indexedPolyCurves, polylines) {
+  const prof = profiles[profileId];
+  if (!prof) return null;
+
+  if (prof.type === 'rectangle') {
+    const hw = prof.xDim / 2, hh = prof.yDim / 2;
+    return [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]];
+  }
+  if (prof.type === 'circle') {
+    const r = prof.radius; const SEGS = 16; // v1.1.0: Höjt från 10 → 16
+    return Array.from({length: SEGS}, (_,i) => {
+      const a = (i / SEGS) * Math.PI * 2;
+      return [Math.cos(a)*r, Math.sin(a)*r];
+    });
+  }
+  if (prof.type === 'ishape') {
+    const { ow, od, wt, ft } = prof;
+    const hw = ow/2, hd = od/2, hwt = wt/2;
+    return [
+      [-hw, -hd], [hw, -hd], [hw, -hd+ft], [hwt, -hd+ft],
+      [hwt, hd-ft], [hw, hd-ft], [hw, hd], [-hw, hd],
+      [-hw, hd-ft], [-hwt, hd-ft], [-hwt, -hd+ft], [-hw, -hd+ft]
+    ];
+  }
+  if (prof.type === 'closed' || prof.type === 'closedWithVoids') {
+    const curveId = prof.type === 'closed' ? prof.curveId : prof.outerCurveId;
+    return resolveCurve2D(curveId, pts, cartPtLists2D, indexedPolyCurves, polylines);
+  }
+  return null;
+}
+
+function resolveCurve2D(curveId, pts, cartPtLists2D, indexedPolyCurves, polylines) {
+  if (indexedPolyCurves[curveId]) {
+    const ipc = indexedPolyCurves[curveId];
+    const list = cartPtLists2D[ipc.listId];
+    if (!list) return null;
+    return list;
+  }
+  if (polylines[curveId]) {
+    const refs = polylines[curveId];
+    const result = [];
+    for (const ref of refs) {
+      const pt = pts[ref];
+      if (pt) result.push([pt[0], pt[1]]);
+    }
+    return result.length >= 2 ? result : null;
+  }
+  return null;
+}
+
+function buildAP3DMatrix(ap, pts, dirs) {
+  if (!ap) return new THREE.Matrix4();
+  const loc = pts[ap.loc] || [0, 0, 0];
+  const axisV = ap.axis != null ? dirs[ap.axis] : null;
+  const refV  = ap.ref  != null ? dirs[ap.ref]  : null;
+
+  let Z = axisV ? new THREE.Vector3(...axisV).normalize() : new THREE.Vector3(0, 0, 1);
+  let X = refV  ? new THREE.Vector3(...refV).normalize()  : new THREE.Vector3(1, 0, 0);
+  let Y = new THREE.Vector3().crossVectors(Z, X).normalize();
+  X = new THREE.Vector3().crossVectors(Y, Z).normalize();
+
+  const m = new THREE.Matrix4().makeBasis(X, Y, Z);
+  m.setPosition(loc[0], loc[1], loc[2]);
+  return m;
+}
+
+// ── BOOTSTRAP ────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  initThree();
+  setupFileDrop();
+  checkVRSupport();
+});
+
+function checkVRSupport() {
+  if (!navigator.xr) {
+    document.getElementById('no-vr-msg').style.display = 'inline';
+    return;
+  }
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+    const msg = document.getElementById('no-vr-msg');
+    msg.textContent = '⚠ VR kräver HTTPS — ladda upp till GitHub Pages';
+    msg.style.display = 'inline';
+    // Still show the VR button so user can click it and get the full explanation
+    document.getElementById('vr-btn').style.display = 'inline-block';
+    return;
+  }
+  navigator.xr.isSessionSupported('immersive-vr').then(ok => {
+    if (ok) document.getElementById('vr-btn').style.display = 'inline-block';
+    else document.getElementById('no-vr-msg').style.display = 'inline';
+  });
+}
+
+// ── VR DIAGNOSTICS ────────────────────────────────────────────────────────────
+async function runVRDiagnostics() {
+  const el = document.getElementById('diag-overlay');
+  const out = document.getElementById('diag-output');
+  el.style.display = 'block';
+  out.textContent = 'Kör...';
+
+  const lines = [];
+  const ok  = s => `✅  ${s}`;
+  const err = s => `❌  ${s}`;
+  const inf = s => `ℹ️   ${s}`;
+
+  lines.push('── MILJÖ ───────────────────────────────────────');
+  lines.push(inf(`URL:              ${location.href}`));
+  lines.push(inf(`Protokoll:        ${location.protocol}`));
+  lines.push(inf(`isSecureContext:  ${window.isSecureContext}`));
+  lines.push(inf(`UserAgent:        ${navigator.userAgent}`));
+  lines.push('');
+  lines.push('── WebXR API ───────────────────────────────────');
+
+  if (!navigator.xr) {
+    lines.push(err('navigator.xr saknas — WebXR inte tillgängligt i denna webbläsare'));
+    out.textContent = lines.join('\n');
+    return;
+  }
+  lines.push(ok('navigator.xr finns'));
+
+  for (const mode of ['immersive-vr', 'immersive-ar', 'inline']) {
+    try {
+      const supported = await navigator.xr.isSessionSupported(mode);
+      lines.push(supported ? ok(`isSessionSupported('${mode}')`) : err(`isSessionSupported('${mode}') → false`));
+    } catch (e) {
+      lines.push(err(`isSessionSupported('${mode}') kastade: ${e.message}`));
+    }
+    out.textContent = lines.join('\n');
+  }
+
+  lines.push('');
+  lines.push('── requestSession-test (varje config testas) ───');
+
+  const configs = [
+    { label: 'local-floor (standard Quest)',    opts: { requiredFeatures: ['local-floor'] } },
+    { label: 'local-floor + hand-tracking',     opts: { requiredFeatures: ['local-floor'], optionalFeatures: ['hand-tracking'] } },
+    { label: 'local (minimal)',                  opts: { requiredFeatures: ['local'] } },
+    { label: 'inga features alls',               opts: {} },
+    { label: 'local-floor + layers',             opts: { requiredFeatures: ['local-floor'], optionalFeatures: ['layers'] } },
+  ];
+
+  for (const cfg of configs) {
+    try {
+      const s = await navigator.xr.requestSession('immersive-vr', cfg.opts);
+      lines.push(ok(`"${cfg.label}" → SESSION OK ← kopiera denna rad!`));
+      await s.end();
+    } catch (e) {
+      lines.push(err(`"${cfg.label}" → ${e.message}`));
+    }
+    out.textContent = lines.join('\n');
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  lines.push('');
+  lines.push('── ANALYS ──────────────────────────────────────');
+  const isQuest = navigator.userAgent.includes('Quest');
+  if (isQuest) {
+    lines.push('⚠️  Quest detekterad.');
+    lines.push('');
+    lines.push('   OBS: requestSession-testerna ovan misslyckas alltid');
+    lines.push('   i diagnostikläget — de körs i en async-loop som inte');
+    lines.push('   längre räknas som en direkt användargest. Det betyder');
+    lines.push('   INTE att din enhet är trasig.');
+    lines.push('');
+    lines.push('   Det vanligaste felet på Quest:');
+    lines.push('   👉 Headsetet MÅSTE vara på huvudet när du trycker');
+    lines.push('      "Starta VR". Proximity-sensorn (inuti headsetet)');
+    lines.push('      måste registrera ansiktet — annars blockerar Meta');
+    lines.push('      Browser alla immersive-sessioner.');
+    lines.push('');
+    lines.push('   Gör så här:');
+    lines.push('   1. Stäng diagnostiken (X Stäng)');
+    lines.push('   2. Ta på headsetet');
+    lines.push('   3. Tryck "▶ Starta VR" med kontrollern');
+  }
+  if (!window.isSecureContext) {
+    lines.push('');
+    lines.push('⚠️  isSecureContext = false — WebXR kräver HTTPS.');
+  }
+  out.textContent = lines.join('\n');
+}
+</script>
+</body>
+</html>
