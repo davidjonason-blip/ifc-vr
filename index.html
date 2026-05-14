@@ -630,6 +630,10 @@
     const xrNormalMatrix = new THREE.Matrix3();
     const xrTeleportPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     const xrTeleportPoint = new THREE.Vector3();
+    const tableGrabStartController = new THREE.Vector3();
+    const tableGrabStartRoot = new THREE.Vector3();
+    const tableGrabHead = new THREE.Vector3();
+    const tableGrabForward = new THREE.Vector3();
     const XR_EYE_HEIGHT = 1.65;
 
     let currentDoc = null;
@@ -654,6 +658,7 @@
     let lastVRInfoText = '';
     let vrFlyMode = false;
     let xrState = 'inte startad';
+    let tableGrab = null;
 
     initControllers();
     bindDom();
@@ -677,10 +682,8 @@
         const controller = renderer.xr.getController(i);
         controller.userData.index = i;
         controller.addEventListener('selectstart', () => handleControllerSelect(controller));
-        controller.addEventListener('squeezestart', () => {
-          frameModel();
-          setStatus('VR-vy centrerad.');
-        });
+        controller.addEventListener('squeezestart', () => handleControllerSqueezeStart(controller));
+        controller.addEventListener('squeezeend', () => handleControllerSqueezeEnd(controller));
         controller.addEventListener('connected', (event) => {
           controller.userData.inputSource = event.data;
           setStatus(`VR-kontroll ${i + 1} ansluten. Vänster spak flyttar, höger spak vrider, trigger väljer.`);
@@ -2577,7 +2580,7 @@
       if (viewBox.isEmpty()) return;
 
       if (!tableMode) {
-        const center = viewAnchorPoint() || viewBox.getCenter(new THREE.Vector3());
+        const center = viewBox.getCenter(new THREE.Vector3());
         const groundY = modelGroundY(viewBox);
         placeOneToOneModel(viewBox, center, groundY);
         root.updateMatrixWorld(true);
@@ -2710,9 +2713,9 @@
     }
 
     function frameModel() {
-      resetCameraRig();
       const viewBox = activeViewBox();
       if (viewBox.isEmpty()) {
+        resetCameraRig();
         camera.position.set(8, 7, 10);
         orbitTarget.set(0, 0, 0);
         camera.lookAt(orbitTarget);
@@ -2726,6 +2729,13 @@
       const radius = Math.max(size.x, size.y, size.z, 1);
 
       if (!tableMode) {
+        if (renderer.xr.isPresenting) {
+          camera.near = 0.01;
+          camera.far = Math.max(radius * 4, 2000);
+          camera.updateProjectionMatrix();
+          return;
+        }
+        resetCameraRig();
         const lookY = isLargeThinMep(currentDoc) ? XR_EYE_HEIGHT : Math.min(Math.max(size.y * 0.25, 1.35), 2.2);
         const lookAhead = new THREE.Vector3(0, lookY, -8);
         orbitTarget.copy(lookAhead);
@@ -2737,6 +2747,7 @@
         return;
       }
 
+      resetCameraRig();
       orbitTarget.copy(center);
       camera.position.set(center.x + radius * 1.2, center.y + radius * 0.8, center.z + radius * 1.35);
       camera.near = Math.max(radius * 0.0005, 0.01);
@@ -2758,6 +2769,7 @@
 
     function setTableMode(enabled, announce = false) {
       tableMode = Boolean(enabled);
+      tableGrab = null;
       modeButton.textContent = tableMode ? 'Bordsläge' : '1:1';
       modeButton.classList.toggle('active', !tableMode);
       applyTableMode();
@@ -3011,6 +3023,8 @@
       const session = renderer.xr.getSession?.();
       if (!session?.inputSources) return;
 
+      updateTableGrab();
+
       let moveX = 0;
       let moveY = 0;
       let turnX = 0;
@@ -3043,6 +3057,64 @@
         const amount = -applyDeadzone(turnX, 0.16) * 1.8 * delta;
         rotateRigAroundHead(amount);
       }
+    }
+
+    function startTableGrab(controller) {
+      if (!currentDoc) return;
+      controller.updateMatrixWorld(true);
+      tableGrabStartController.setFromMatrixPosition(controller.matrixWorld);
+      tableGrabStartRoot.copy(root.position);
+
+      const hits = controllerHits(controller, tableGrabObjects());
+      if (!hits.length) {
+        placeTableModelInFront();
+        setStatus('Bordsmodellen flyttad framför dig. Håll grip på modellen för att dra den.');
+        return;
+      }
+
+      tableGrab = {
+        controller,
+        controllerStart: tableGrabStartController.clone(),
+        rootStart: tableGrabStartRoot.clone()
+      };
+      setStatus('Grip: dra bordsmodellen och släpp för att placera.');
+    }
+
+    function updateTableGrab() {
+      if (!tableGrab || !tableMode) return;
+      const controller = tableGrab.controller;
+      controller.updateMatrixWorld(true);
+      tableGrabStartController.setFromMatrixPosition(controller.matrixWorld);
+      root.position.copy(tableGrab.rootStart).add(tableGrabStartController.sub(tableGrab.controllerStart));
+      root.updateMatrixWorld(true);
+      updateStageFrame();
+    }
+
+    function tableGrabObjects() {
+      return [
+        tablePlate,
+        ...drawables.filter((mesh) => mesh.visible),
+        ...performanceBatches.filter((mesh) => mesh.visible)
+      ].filter(Boolean);
+    }
+
+    function placeTableModelInFront() {
+      root.updateMatrixWorld(true);
+      const box = activeViewBox().clone().applyMatrix4(root.matrixWorld);
+      if (box.isEmpty()) return;
+      camera.getWorldPosition(tableGrabHead);
+      camera.getWorldDirection(tableGrabForward);
+      tableGrabForward.y = 0;
+      if (tableGrabForward.lengthSq() < 1e-6) tableGrabForward.set(0, 0, -1);
+      tableGrabForward.normalize();
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const distance = THREE.MathUtils.clamp(Math.max(size.x, size.z) * 0.45 + 1.0, 1.25, 4.5);
+      const target = tableGrabHead.clone().addScaledVector(tableGrabForward, distance);
+      target.y = center.y;
+      root.position.add(target.sub(center));
+      root.updateMatrixWorld(true);
+      updateStageFrame();
     }
 
     function readXRThumbstick(gamepad) {
@@ -3106,6 +3178,21 @@
         return;
       }
       selectFromController(controller);
+    }
+
+    function handleControllerSqueezeStart(controller) {
+      if (tableMode) {
+        startTableGrab(controller);
+        return;
+      }
+      setStatus('Centrering finns på VR-tavlan. Grip är reserverad för modellgrepp i bordsläge.');
+    }
+
+    function handleControllerSqueezeEnd(controller) {
+      if (!tableGrab || tableGrab.controller !== controller) return;
+      tableGrab = null;
+      updateStageFrame();
+      setStatus('Modellen placerad.');
     }
 
     function activateVRMenuFromController(controller) {
