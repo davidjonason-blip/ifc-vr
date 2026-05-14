@@ -634,6 +634,7 @@
     const tableGrabStartRoot = new THREE.Vector3();
     const tableGrabHead = new THREE.Vector3();
     const tableGrabForward = new THREE.Vector3();
+    const oneToOneEntryLocalPoint = new THREE.Vector3();
     const XR_EYE_HEIGHT = 1.65;
 
     let currentDoc = null;
@@ -659,6 +660,7 @@
     let vrFlyMode = false;
     let xrState = 'inte startad';
     let tableGrab = null;
+    let pendingOneToOneEntry = null;
 
     initControllers();
     bindDom();
@@ -2600,25 +2602,10 @@
     }
 
     function placeOneToOneFromTableStart(viewBox) {
-      placeTableModel(viewBox);
-      if (!renderer.xr.isPresenting) return;
-
-      root.updateMatrixWorld(true);
-      const tableBox = viewBox.clone().applyMatrix4(root.matrixWorld);
-      if (tableBox.isEmpty()) return;
-
-      camera.getWorldPosition(tableGrabHead);
-      camera.getWorldDirection(tableGrabForward);
-      tableGrabForward.y = 0;
-      if (tableGrabForward.lengthSq() < 1e-6) tableGrabForward.set(0, 0, -1);
-      tableGrabForward.normalize();
-
-      const center = tableBox.getCenter(new THREE.Vector3());
-      const size = tableBox.getSize(new THREE.Vector3());
-      const distance = THREE.MathUtils.clamp(Math.max(size.x, size.z) * 0.5 + 1.2, 2.4, 6.0);
-      const target = tableGrabHead.clone().addScaledVector(tableGrabForward, distance);
-      target.y = center.y;
-      root.position.add(target.sub(center));
+      root.scale.setScalar(1);
+      const center = pendingOneToOneEntry || viewBox.getCenter(new THREE.Vector3());
+      const groundY = modelGroundY(viewBox);
+      placeOneToOneModel(viewBox, center, groundY);
     }
 
     function modelGroundY(viewBox = null) {
@@ -2794,6 +2781,7 @@
     function setTableMode(enabled, announce = false) {
       tableMode = Boolean(enabled);
       tableGrab = null;
+      if (tableMode) pendingOneToOneEntry = null;
       modeButton.textContent = tableMode ? 'Bordsläge' : '1:1';
       modeButton.classList.toggle('active', !tableMode);
       applyTableMode();
@@ -3177,7 +3165,7 @@
         return;
       }
       const controller = leftController();
-      const target = controller && (vrFlyMode ? computeFlyTarget(controller, xrTeleportPoint) : computeTeleportTarget(controller, xrTeleportPoint, false));
+      const target = controller && (vrFlyMode ? computeFlyTarget(controller, xrTeleportPoint) : computeTeleportTarget(controller, xrTeleportPoint, true));
       if (!target) {
         vrTeleportMarker.visible = false;
         return;
@@ -3235,9 +3223,18 @@
       if (tableMode) {
         const hits = controllerHits(controller, selectableObjects());
         const hit = hits.find((item) => item.point);
-        setTableMode(false, true);
+        pendingOneToOneEntry = null;
         if (hit?.point) {
-          teleportCameraTo(hit.point);
+          oneToOneEntryLocalPoint.copy(hit.point);
+          root.worldToLocal(oneToOneEntryLocalPoint);
+          pendingOneToOneEntry = oneToOneEntryLocalPoint.clone();
+        }
+        setTableMode(false, true);
+        if (pendingOneToOneEntry) {
+          const target = pendingOneToOneEntry.clone();
+          root.localToWorld(target);
+          teleportCameraTo(target);
+          pendingOneToOneEntry = null;
           setStatus('1:1-läge aktivt. Teleporterad till pekad plats från bordsläge.');
           return;
         }
@@ -3255,7 +3252,7 @@
 
     function computeTeleportTarget(controller, target, includeModelPlanes = false) {
       controllerRay(controller);
-      if (includeModelPlanes && findHorizontalSurfaceTarget(target)) {
+      if (includeModelPlanes && findModelSurfaceTarget(target)) {
         return true;
       }
       const floorY = xrUserFloorY();
@@ -3279,16 +3276,19 @@
       return constrainTeleportTarget(target, { includeY: true, margin: 2.4 });
     }
 
-    function findHorizontalSurfaceTarget(target) {
+    function findModelSurfaceTarget(target) {
       const hits = raycaster.intersectObjects(selectableObjects(), false);
       for (const hit of hits) {
         if (!hit.face || !hit.object) continue;
         const normal = hit.face.normal.clone();
         xrNormalMatrix.getNormalMatrix(hit.object.matrixWorld);
         normal.applyMatrix3(xrNormalMatrix).normalize();
-        if (normal.y < 0.42) continue;
         target.copy(hit.point);
-        target.y += 0.04;
+        if (normal.y >= 0.42) {
+          target.y += 0.04;
+          return constrainTeleportTarget(target, { includeY: true, margin: 1.2 });
+        }
+        target.y = xrUserFloorY();
         return constrainTeleportTarget(target, { includeY: true, margin: 1.2 });
       }
       return false;
