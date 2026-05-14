@@ -22,6 +22,7 @@ function main() {
   const includeSpaces = !args.includes('--exclude-spaces') && !args.includes('--no-spaces');
   const renderBatches = !args.includes('--no-render-batches');
   const binaryRenderBatches = args.includes('--binary-render-batches');
+  const renderBatchThreshold = readNumberOption(args, '--render-batch-threshold', undefined);
   const inputs = expandInputPaths(positionalArgs(args), { recursive });
 
   if (!inputs.length || args.includes('-h') || args.includes('--help')) {
@@ -42,7 +43,7 @@ function main() {
     return { name: sourceName, doc: result.doc, stats: result.stats };
   });
 
-  let doc = mergeVRIFCDocs(converted, { projectName, excludeExtremeBounds, excludeSpatialOutliers, renderBatches });
+  let doc = mergeVRIFCDocs(converted, { projectName, excludeExtremeBounds, excludeSpatialOutliers, renderBatches, renderBatchThreshold });
   let binaryPath = '';
   if (binaryRenderBatches) {
     binaryPath = binaryPathForOutput(output);
@@ -113,7 +114,7 @@ function positionalArgs(args) {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg.startsWith('--')) {
-      if (['--out', '--name', '--max-elements', '--overview', '--report'].includes(arg)) i++;
+    if (['--out', '--name', '--max-elements', '--overview', '--report', '--render-batch-threshold'].includes(arg)) i++;
       continue;
     }
     out.push(arg);
@@ -169,7 +170,7 @@ function binaryPathForOutput(output) {
 
 function printHelp() {
   console.log(`Usage:
-  node converter/package.js model-a.ifc model-b.ifc --out project.vrifc.json[.gz] [--name "Project"] [--max-elements 100000] [--overview auto|hybrid|off|replace|force] [--report report.json] [--recursive] [--exclude-spaces] [--exclude-extreme-bounds] [--exclude-spatial-outliers] [--no-render-batches] [--binary-render-batches] [--pretty] [--gzip]
+  node converter/package.js model-a.ifc model-b.ifc --out project.vrifc.json[.gz] [--name "Project"] [--max-elements 100000] [--overview auto|hybrid|off|replace|force] [--report report.json] [--recursive] [--exclude-spaces] [--exclude-extreme-bounds] [--exclude-spatial-outliers] [--no-render-batches] [--binary-render-batches] [--render-batch-threshold 18000] [--pretty] [--gzip]
 
 Example:
   node converter/package.js "../TEST IFCer/W150-V-test.ifc" "../TEST IFCer/V157-V-test.ifc" --out samples/W150-V157.package.vrifc.json --name "W150 + V157" --report samples/W150-V157.report.json`);
