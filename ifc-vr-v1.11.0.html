@@ -2230,6 +2230,20 @@ async function parseAndRender(data, filename) {
   setProgress(98); setSub(`Byggde ${built} mesh`);
   await sleep(50);
 
+  // v1.11.x: Centre model at world origin so VR player spawns next to it.
+  // Real-world IFC files (Sweref99 etc.) have coordinates in the 100 000s of
+  // metres — without this the player rig ends up kilometres away.
+  ifcRoot.updateMatrixWorld(true);
+  const _cbox = computeSceneBox();
+  if (!_cbox.isEmpty()) {
+    const _cc = new THREE.Vector3();
+    _cbox.getCenter(_cc);
+    ifcRoot.position.x -= _cc.x;
+    ifcRoot.position.z -= _cc.z;
+    ifcRoot.position.y -= _cbox.min.y;   // floor at y=0
+    ifcRoot.updateMatrixWorld(true);
+  }
+
   updateDisciplinePanelUI();
 }
 
