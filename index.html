@@ -2563,8 +2563,9 @@
 
       if (!tableMode) {
         const center = viewAnchorPoint() || viewBox.getCenter(new THREE.Vector3());
-        const yOffset = -viewBox.min.y;
-        root.position.set(-center.x, yOffset, -center.z - 2.2);
+        const groundY = modelGroundY(viewBox);
+        const spawnDistance = 5.5;
+        root.position.set(-center.x, -groundY, -viewBox.max.z - spawnDistance);
         root.updateMatrixWorld(true);
         return;
       }
@@ -2577,6 +2578,13 @@
       root.scale.setScalar(scale);
       root.position.set(-center.x * scale, -viewBox.min.y * scale, -center.z * scale - 2.2);
       root.updateMatrixWorld(true);
+    }
+
+    function modelGroundY(viewBox = null) {
+      const minY = currentDoc?.bounds?.min?.[1];
+      if (Number.isFinite(minY)) return minY;
+      if (modelBox && !modelBox.isEmpty()) return modelBox.min.y;
+      return viewBox && !viewBox.isEmpty() ? viewBox.min.y : 0;
     }
 
     function viewAnchorPoint() {
@@ -2666,10 +2674,10 @@
       const radius = Math.max(size.x, size.y, size.z, 1);
 
       if (!tableMode) {
-        const lookY = isLargeThinMep(currentDoc) ? 1.65 : Math.min(Math.max(size.y * 0.35, 1.45), 2.2);
-        const lookAhead = new THREE.Vector3(0, lookY, -6);
+        const lookY = isLargeThinMep(currentDoc) ? XR_EYE_HEIGHT : Math.min(Math.max(size.y * 0.25, 1.35), 2.2);
+        const lookAhead = new THREE.Vector3(0, lookY, -8);
         orbitTarget.copy(lookAhead);
-        camera.position.set(0, 1.65, 4.2);
+        camera.position.set(0, XR_EYE_HEIGHT, 1.2);
         camera.near = 0.01;
         camera.far = Math.max(radius * 4, 2000);
         camera.updateProjectionMatrix();
