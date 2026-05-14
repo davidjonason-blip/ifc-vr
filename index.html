@@ -2563,7 +2563,7 @@
 
       if (!tableMode) {
         const center = viewAnchorPoint() || viewBox.getCenter(new THREE.Vector3());
-        const yOffset = 1.65 - center.y;
+        const yOffset = -viewBox.min.y;
         root.position.set(-center.x, yOffset, -center.z - 2.2);
         root.updateMatrixWorld(true);
         return;
@@ -2650,6 +2650,7 @@
     }
 
     function frameModel() {
+      resetCameraRig();
       const viewBox = activeViewBox();
       if (viewBox.isEmpty()) {
         camera.position.set(8, 7, 10);
@@ -2682,6 +2683,13 @@
       camera.far = Math.max(radius * 80, 2000);
       camera.updateProjectionMatrix();
       camera.lookAt(center);
+    }
+
+    function resetCameraRig() {
+      cameraRig.position.set(0, 0, 0);
+      cameraRig.rotation.set(0, 0, 0);
+      cameraRig.scale.setScalar(1);
+      cameraRig.updateMatrixWorld(true);
     }
 
     function toggleMode() {
