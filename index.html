@@ -609,6 +609,11 @@
     const drawables = [];
     const performanceBatches = [];
     const controllerRays = [];
+    const xrForward = new THREE.Vector3();
+    const xrRight = new THREE.Vector3();
+    const xrMove = new THREE.Vector3();
+    const xrHead = new THREE.Vector3();
+    const xrYawAxis = new THREE.Vector3(0, 1, 0);
 
     let currentDoc = null;
     let currentRenderDoc = null;
@@ -627,6 +632,7 @@
     let lastY = 0;
     let renderFrameCount = 0;
     let lastDiagnosticUpdate = 0;
+    let lastXRFrameTime = 0;
     let xrState = 'inte startad';
 
     initControllers();
@@ -635,8 +641,9 @@
     loadHashModel();
     bindRendererDiagnostics();
 
-    renderer.setAnimationLoop(() => {
+    renderer.setAnimationLoop((time) => {
       renderFrameCount++;
+      updateXRNavigation(time);
       updateControllerRays();
       renderer.render(scene, camera);
       updateDiagnosticsPanel();
@@ -649,6 +656,17 @@
         const controller = renderer.xr.getController(i);
         controller.userData.index = i;
         controller.addEventListener('selectstart', () => selectFromController(controller));
+        controller.addEventListener('squeezestart', () => {
+          frameModel();
+          setStatus('VR-vy centrerad.');
+        });
+        controller.addEventListener('connected', (event) => {
+          controller.userData.inputSource = event.data;
+          setStatus(`VR-kontroll ${i + 1} ansluten. Vänster spak flyttar, höger spak vrider, trigger väljer.`);
+        });
+        controller.addEventListener('disconnected', () => {
+          controller.userData.inputSource = null;
+        });
         scene.add(controller);
 
         const lineGeo = new THREE.BufferGeometry().setFromPoints([
@@ -716,7 +734,8 @@
       });
       renderer.xr.addEventListener('sessionstart', () => {
         xrState = 'XR-session aktiv';
-        setStatus('VR-läge startat.');
+        lastXRFrameTime = 0;
+        setStatus('VR-läge startat. Vänster spak flyttar, höger spak vrider, trigger väljer, grip centrerar.');
         updateDiagnosticsPanel(true);
       });
       renderer.xr.addEventListener('sessionend', () => {
@@ -2704,7 +2723,7 @@
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
-      selectFromHits(raycaster.intersectObjects(drawables, false));
+      selectFromHits(raycaster.intersectObjects(selectableObjects(), false));
     }
 
     function onWheel(event) {
@@ -2738,6 +2757,74 @@
       orbitTarget.add(move);
     }
 
+    function updateXRNavigation(time = 0) {
+      if (!renderer.xr.isPresenting) {
+        lastXRFrameTime = 0;
+        return;
+      }
+      const delta = lastXRFrameTime ? THREE.MathUtils.clamp((time - lastXRFrameTime) / 1000, 0.001, 0.05) : 0.016;
+      lastXRFrameTime = time;
+
+      const session = renderer.xr.getSession?.();
+      if (!session?.inputSources) return;
+
+      let moveX = 0;
+      let moveY = 0;
+      let turnX = 0;
+      for (const source of session.inputSources) {
+        const stick = readXRThumbstick(source.gamepad);
+        if (!stick) continue;
+        if (source.handedness === 'right') {
+          turnX += stick.x;
+        } else {
+          moveX += stick.x;
+          moveY += stick.y;
+        }
+      }
+
+      if (Math.abs(moveX) > 0.08 || Math.abs(moveY) > 0.08) {
+        moveX = applyDeadzone(moveX, 0.08);
+        moveY = applyDeadzone(moveY, 0.08);
+        camera.getWorldDirection(xrForward);
+        xrForward.y = 0;
+        if (xrForward.lengthSq() < 1e-6) xrForward.set(0, 0, -1);
+        xrForward.normalize();
+        xrRight.copy(xrForward).cross(xrYawAxis).normalize();
+        const speed = tableMode ? 1.15 : 2.25;
+        xrMove.copy(xrForward).multiplyScalar(-moveY * speed * delta);
+        xrMove.addScaledVector(xrRight, moveX * speed * delta);
+        cameraRig.position.add(xrMove);
+      }
+
+      if (Math.abs(turnX) > 0.16) {
+        const amount = -applyDeadzone(turnX, 0.16) * 1.8 * delta;
+        rotateRigAroundHead(amount);
+      }
+    }
+
+    function readXRThumbstick(gamepad) {
+      const axes = gamepad?.axes || [];
+      if (axes.length >= 4 && (Math.abs(axes[2]) > 0.05 || Math.abs(axes[3]) > 0.05)) {
+        return { x: axes[2] || 0, y: axes[3] || 0 };
+      }
+      if (axes.length >= 2 && (Math.abs(axes[0]) > 0.05 || Math.abs(axes[1]) > 0.05)) {
+        return { x: axes[0] || 0, y: axes[1] || 0 };
+      }
+      return null;
+    }
+
+    function applyDeadzone(value, deadzone) {
+      const abs = Math.abs(value);
+      if (abs <= deadzone) return 0;
+      return Math.sign(value) * ((abs - deadzone) / (1 - deadzone));
+    }
+
+    function rotateRigAroundHead(angle) {
+      camera.getWorldPosition(xrHead);
+      cameraRig.position.sub(xrHead).applyAxisAngle(xrYawAxis, angle).add(xrHead);
+      cameraRig.rotateY(angle);
+    }
+
     function updateControllerRays() {
       if (!renderer.xr.isPresenting) return;
       for (const item of controllerRays) {
@@ -2749,10 +2836,17 @@
       tempMatrix.identity().extractRotation(controller.matrixWorld);
       raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
       raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-      selectFromHits(raycaster.intersectObjects(drawables, false));
+      selectFromHits(raycaster.intersectObjects(selectableObjects(), false));
     }
 
     const tempMatrix = new THREE.Matrix4();
+
+    function selectableObjects() {
+      return [
+        ...drawables.filter((mesh) => mesh.visible),
+        ...performanceBatches.filter((mesh) => mesh.visible)
+      ];
+    }
 
     function selectFromHits(hits) {
       const hit = hits.find((item) => item.object?.userData?.vrifc);
@@ -2763,10 +2857,26 @@
         return;
       }
 
+      const hitData = hit.object.userData.vrifc || {};
+      if (hitData.kind === 'performance-batch') {
+        selected = null;
+        selectionFrame.visible = false;
+        updateProps();
+        setStatus('Träff på renderbatch. Byt till Mesh-läge för elementval när Quest-budgeten tillåter.');
+        return;
+      }
+      const instance = hit.object.userData.vrifc.instances?.[hit.instanceId];
+      if (!instance) {
+        selected = null;
+        selectionFrame.visible = false;
+        updateProps();
+        setStatus('Träff på objekt utan instansdata.');
+        return;
+      }
       selected = {
         mesh: hit.object,
         instanceId: hit.instanceId,
-        data: hit.object.userData.vrifc.instances[hit.instanceId]
+        data: instance
       };
       updateSelectionFrame();
       updateProps();
