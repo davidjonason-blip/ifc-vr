@@ -618,6 +618,7 @@
     let performanceMode = false;
     let showSpaces = true;
     let pendingBinaryPackage = null;
+    let builtGeometryCount = 0;
     let deferredDetailMeshCount = 0;
     let deferredDetailDrawableCount = 0;
     let orbitTarget = new THREE.Vector3();
@@ -1076,10 +1077,10 @@
       const materials = buildMaterials(doc.materials || [], isLargeThinMep(doc));
       cacheMaterialDefs(doc.materials || []);
       const runtimeMaterials = new Map();
-      const geometries = buildGeometries(currentRenderDoc.geometries || []);
       const deferDetailMeshes = shouldDeferDetailedMeshes(currentRenderDoc);
       const allGroups = groupElements(currentRenderDoc.elements || []);
       const grouped = [];
+      const neededGeometryIds = new Set();
       deferredDetailMeshCount = 0;
       deferredDetailDrawableCount = 0;
       for (const group of allGroups) {
@@ -1089,7 +1090,10 @@
           continue;
         }
         grouped.push(group);
+        neededGeometryIds.add(group.geometry);
       }
+      const geometries = buildGeometries(currentRenderDoc.geometries || [], neededGeometryIds);
+      builtGeometryCount = geometries.size;
       populateFilters(currentRenderDoc.elements || []);
 
       for (const group of grouped) {
@@ -1152,7 +1156,7 @@
       updatePerformanceButton();
       const visualInfo = currentRenderDoc.renderLabel ? ` Visning: ${currentRenderDoc.renderLabel}.` : '';
       const performanceInfo = performanceMode ? ' Prestandaläge aktiverat för stor helmodell.' : '';
-      const deferredInfo = deferredDetailMeshCount ? ` Detaljmesh skjuts upp: ${deferredDetailMeshCount} element visas via ${performanceBatches.length} renderbatchar.` : '';
+      const deferredInfo = deferredDetailMeshCount ? ` Detaljmesh skjuts upp: ${deferredDetailMeshCount} element visas via ${performanceBatches.length} renderbatchar, ${builtGeometryCount} geometrier byggda.` : '';
       setStatus(`${doc.project?.name || sourceName} laddad: ${doc.elements.length} element, ${drawables.length} draw objects.${visualInfo}${performanceInfo}${deferredInfo}`);
     }
 
@@ -1368,9 +1372,10 @@
       return doc?.sceneHints?.overview === 'large-thin-mep' || doc?.sceneHints?.largeThinMep;
     }
 
-    function buildGeometries(geometryDefs) {
+    function buildGeometries(geometryDefs, neededIds = null) {
       const geometries = new Map();
       for (const def of geometryDefs) {
+        if (neededIds && !neededIds.has(def.id)) continue;
         if (def.kind === 'box') {
           const size = def.size || [1, 1, 1];
           const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
@@ -2398,6 +2403,7 @@
       }
       drawables.length = 0;
       performanceBatches.length = 0;
+      builtGeometryCount = 0;
       deferredDetailMeshCount = 0;
       deferredDetailDrawableCount = 0;
       currentMaterialDefs.clear();
@@ -2833,6 +2839,7 @@
           addProp('Binär geometri', currentDoc.binaryGeometry.schema || 'Aktiv');
           addProp('Binär payload', formatBytes(currentDoc.binaryGeometry.buffers.reduce((sum, buffer) => sum + (buffer.byteLength || 0), 0)));
         }
+        if (builtGeometryCount) addProp('Geometrier byggda', String(builtGeometryCount));
         if (performanceMode) addProp('Prestandaläge', 'Aktivt');
         if (deferredDetailMeshCount) addProp('Quest detaljmesh', `${deferredDetailMeshCount} element via ${performanceBatches.length} batchar`);
         if (currentRenderDoc?.renderMode) addProp('Visning', currentRenderDoc.renderLabel || currentRenderDoc.renderMode);
@@ -3063,6 +3070,7 @@
         <div>Frames: ${renderFrameCount}</div>
         <div>Modell: ${escapeHtml(loaded)}</div>
         <div>Drawables: ${drawables.length}</div>
+        <div>Geometrier: ${builtGeometryCount}</div>
         ${deferredDetailMeshCount ? `<div>Defererad mesh: ${deferredDetailMeshCount} el / ${performanceBatches.length} batchar</div>` : ''}
         ${pendingBinaryPackage ? `<div class="warn">Väntar på: ${escapeHtml(expectedBinary)}</div>` : ''}
         <div>Status: ${escapeHtml(status)}</div>
