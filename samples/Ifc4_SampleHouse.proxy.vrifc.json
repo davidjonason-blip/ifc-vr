@@ -1,0 +1,1894 @@
+{
+  "format": "vr-ifc",
+  "version": "0.0.1",
+  "generator": "VR-IFC Converter v0.0.1",
+  "units": "m",
+  "axis": "Y_UP",
+  "project": {
+    "name": "Ifc4_SampleHouse"
+  },
+  "source": {
+    "name": "Ifc4_SampleHouse.ifc",
+    "kind": "IFC",
+    "convertedAt": "2026-05-03T16:32:23.022Z"
+  },
+  "conversion": {
+    "geometryMode": "representation-bounds-box",
+    "placementMode": "ifc-local-placement",
+    "sourceUnitScaleToMeters": 0.001,
+    "note": "v0.0.1 preserves IFC product identity and emits box proxies. When possible, box dimensions are derived from IFCEXTRUDEDAREASOLID rectangle/circle profiles. Real triangulated geometry export is planned for the next converter stage."
+  },
+  "materials": [
+    {
+      "id": "default",
+      "color": "#b7c6d8",
+      "roughness": 0.78
+    },
+    {
+      "id": "concrete",
+      "color": "#aeb9c8",
+      "roughness": 0.82
+    },
+    {
+      "id": "steel",
+      "color": "#64748b",
+      "roughness": 0.58
+    },
+    {
+      "id": "glass",
+      "color": "#67e8f9",
+      "roughness": 0.18,
+      "opacity": 0.42
+    },
+    {
+      "id": "door",
+      "color": "#c08457",
+      "roughness": 0.74
+    },
+    {
+      "id": "space",
+      "color": "#a78bfa",
+      "roughness": 0.8,
+      "opacity": 0.18
+    },
+    {
+      "id": "supply",
+      "color": "#38bdf8",
+      "roughness": 0.5
+    },
+    {
+      "id": "return",
+      "color": "#f59e0b",
+      "roughness": 0.5
+    }
+  ],
+  "geometries": [
+    {
+      "id": "proxy-space",
+      "kind": "box",
+      "size": [
+        3.2,
+        2.7,
+        3.2
+      ]
+    },
+    {
+      "id": "box-ifcspace-4453x2500x3463",
+      "kind": "box",
+      "size": [
+        4.4525,
+        2.5,
+        3.46250000000001
+      ]
+    },
+    {
+      "id": "box-ifcspace-1952x2500x4453",
+      "kind": "box",
+      "size": [
+        1.9524999999999901,
+        2.5,
+        4.4525
+      ]
+    },
+    {
+      "id": "box-ifcwall-14145x2474x290",
+      "kind": "box",
+      "size": [
+        14.145,
+        2.47370259937427,
+        0.29
+      ]
+    },
+    {
+      "id": "box-ifcwall-5800x3358x290",
+      "kind": "box",
+      "size": [
+        5.8,
+        3.35822428189562,
+        0.29
+      ]
+    },
+    {
+      "id": "box-ifcwall-8955x2821x290",
+      "kind": "box",
+      "size": [
+        8.955,
+        2.82109277768944,
+        0.29
+      ]
+    },
+    {
+      "id": "proxy-curtainwall",
+      "kind": "box",
+      "size": [
+        4,
+        3,
+        0.12
+      ]
+    },
+    {
+      "id": "proxy-plate",
+      "kind": "box",
+      "size": [
+        1.4,
+        1.2,
+        0.08
+      ]
+    },
+    {
+      "id": "proxy-member",
+      "kind": "box",
+      "size": [
+        2.4,
+        0.22,
+        0.22
+      ]
+    },
+    {
+      "id": "box-ifcmember-30x1840x30",
+      "kind": "box",
+      "size": [
+        0.03,
+        1.84000000000001,
+        0.0299999999999997
+      ]
+    },
+    {
+      "id": "box-ifcmember-30x1855x30",
+      "kind": "box",
+      "size": [
+        0.03,
+        1.85500000000001,
+        0.0299999999999997
+      ]
+    },
+    {
+      "id": "box-ifcmember-30x1588x30",
+      "kind": "box",
+      "size": [
+        0.0300000000000002,
+        1.58833333333333,
+        0.0300000000000002
+      ]
+    },
+    {
+      "id": "box-ifcmember-30x1603x30",
+      "kind": "box",
+      "size": [
+        0.0300000000000002,
+        1.6033333333333302,
+        0.0300000000000002
+      ]
+    },
+    {
+      "id": "box-ifcmember-30x2751x30",
+      "kind": "box",
+      "size": [
+        0.0300000000000002,
+        2.75131268323819,
+        0.0300000000000002
+      ]
+    },
+    {
+      "id": "proxy-wall",
+      "kind": "box",
+      "size": [
+        4.8,
+        2.8,
+        0.24
+      ]
+    },
+    {
+      "id": "proxy-door",
+      "kind": "box",
+      "size": [
+        1,
+        2.1,
+        0.12
+      ]
+    },
+    {
+      "id": "proxy-window",
+      "kind": "box",
+      "size": [
+        1.4,
+        1.2,
+        0.08
+      ]
+    },
+    {
+      "id": "box-ifcslab-8668x470x16868",
+      "kind": "box",
+      "size": [
+        8.66750000000002,
+        0.47000000000000003,
+        16.8675
+      ]
+    },
+    {
+      "id": "box-ifcroof-14841x1734x7285",
+      "kind": "box",
+      "size": [
+        14.8409818482127,
+        1.7337480694225391,
+        7.284945863304044
+      ]
+    },
+    {
+      "id": "proxy-slab",
+      "kind": "box",
+      "size": [
+        4.8,
+        0.28,
+        4.8
+      ]
+    }
+  ],
+  "elements": [
+    {
+      "id": "ifc-177",
+      "type": "IFCSPACE",
+      "name": "1 - Living room",
+      "geometry": "proxy-space",
+      "material": "space",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 177,
+        "globalId": "3w0zWKm7n8SB1qbfwUzt0U",
+        "placementId": 140
+      },
+      "properties": {
+        "ExpressId": "177",
+        "GlobalId": "3w0zWKm7n8SB1qbfwUzt0U",
+        "IfcType": "IFCSPACE",
+        "ObjectType": "-",
+        "Placement": "#140",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-323",
+      "type": "IFCSPACE",
+      "name": "2 - Bedroom",
+      "geometry": "box-ifcspace-4453x2500x3463",
+      "material": "space",
+      "transform": {
+        "position": [
+          3.8939015065281604,
+          1.25,
+          -2.67733233348279
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 323,
+        "globalId": "3w0zWKm7n8SB1qbfwUzt0J",
+        "placementId": 309
+      },
+      "properties": {
+        "ExpressId": "323",
+        "GlobalId": "3w0zWKm7n8SB1qbfwUzt0J",
+        "IfcType": "IFCSPACE",
+        "ObjectType": "-",
+        "Placement": "#309",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#318",
+        "Solid": "#317",
+        "Profile": "#313"
+      }
+    },
+    {
+      "id": "ifc-421",
+      "type": "IFCSPACE",
+      "name": "3 - Entrance hall",
+      "geometry": "box-ifcspace-1952x2500x4453",
+      "material": "space",
+      "transform": {
+        "position": [
+          3.8939015065281515,
+          1.25,
+          0.12516766651720967
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 421,
+        "globalId": "3w0zWKm7n8SB1qbfwUzt0G",
+        "placementId": 407
+      },
+      "properties": {
+        "ExpressId": "421",
+        "GlobalId": "3w0zWKm7n8SB1qbfwUzt0G",
+        "IfcType": "IFCSPACE",
+        "ObjectType": "-",
+        "Placement": "#407",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#416",
+        "Solid": "#415",
+        "Profile": "#411"
+      }
+    },
+    {
+      "id": "ifc-531",
+      "type": "IFCSPACE",
+      "name": "4 - Roof",
+      "geometry": "proxy-space",
+      "material": "space",
+      "transform": {
+        "position": [
+          0,
+          2.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 531,
+        "globalId": "09J5N7xMHBfQZeQGAEMota",
+        "placementId": 505
+      },
+      "properties": {
+        "ExpressId": "531",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMota",
+        "IfcType": "IFCSPACE",
+        "ObjectType": "-",
+        "Placement": "#505",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-1229",
+      "type": "IFCWALL",
+      "name": "Basic Wall:Wall-Ext_102Bwk-75Ins-100LBlk-12P:285330",
+      "geometry": "box-ifcwall-14145x2474x290",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          -0.66234849347184,
+          1.236851299687135,
+          -4.55358233348283
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 1229,
+        "globalId": "3cUkl32yn9qRSPvBJVyWw5",
+        "placementId": 621
+      },
+      "properties": {
+        "ExpressId": "1229",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWw5",
+        "IfcType": "IFCWALL",
+        "ObjectType": "Basic Wall:Wall-Ext_102Bwk-75Ins-100LBlk-12P:45419",
+        "Placement": "#621",
+        "GeometrySource": "brep-bounds-box",
+        "ShapeRepresentation": "#1223",
+        "Solid": "#1213",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-1752",
+      "type": "IFCWALL",
+      "name": "Basic Wall:Wall-Ext_102Bwk-75Ins-100LBlk-12P:285395",
+      "geometry": "box-ifcwall-5800x3358x290",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          9.16515150652816,
+          1.67911214094781,
+          -4.40858233348285
+        ],
+        "rotation": [
+          0,
+          -90,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 1752,
+        "globalId": "3cUkl32yn9qRSPvBJVyWx4",
+        "placementId": 1456
+      },
+      "properties": {
+        "ExpressId": "1752",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWx4",
+        "IfcType": "IFCWALL",
+        "ObjectType": "Basic Wall:Wall-Ext_102Bwk-75Ins-100LBlk-12P:45419",
+        "Placement": "#1456",
+        "GeometrySource": "brep-bounds-box",
+        "ShapeRepresentation": "#1746",
+        "Solid": "#1742",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-2327",
+      "type": "IFCWALL",
+      "name": "Basic Wall:Wall-Ext_102Bwk-75Ins-100LBlk-12P:285459",
+      "geometry": "box-ifcwall-8955x2821x290",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          10.59765150652815,
+          1.41054638884472,
+          1.24641766651721
+        ],
+        "rotation": [
+          0,
+          180,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 2327,
+        "globalId": "3cUkl32yn9qRSPvBJVyWy4",
+        "placementId": 1801
+      },
+      "properties": {
+        "ExpressId": "2327",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWy4",
+        "IfcType": "IFCWALL",
+        "ObjectType": "Basic Wall:Wall-Ext_102Bwk-75Ins-100LBlk-12P:45419",
+        "Placement": "#1801",
+        "GeometrySource": "brep-bounds-box",
+        "ShapeRepresentation": "#2321",
+        "Solid": "#2317",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-2375",
+      "type": "IFCCURTAINWALL",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:285582",
+      "geometry": "proxy-curtainwall",
+      "material": "glass",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 2375,
+        "globalId": "3cUkl32yn9qRSPvBJVyW_P",
+        "placementId": 2374
+      },
+      "properties": {
+        "ExpressId": "2375",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyW_P",
+        "IfcType": "IFCCURTAINWALL",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:29096",
+        "Placement": "#2374",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-2470",
+      "type": "IFCPLATE",
+      "name": "System Panel:Glazed:285583",
+      "geometry": "proxy-plate",
+      "material": "glass",
+      "transform": {
+        "position": [
+          -7.71034849347184,
+          0,
+          -4.4101776057188
+        ],
+        "rotation": [
+          0,
+          -90,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 2470,
+        "globalId": "3cUkl32yn9qRSPvBJVyW_O",
+        "placementId": 2468
+      },
+      "properties": {
+        "ExpressId": "2470",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyW_O",
+        "IfcType": "IFCPLATE",
+        "ObjectType": "Glazed",
+        "Placement": "#2468",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-2628",
+      "type": "IFCPLATE",
+      "name": "System Panel:Glazed:285586",
+      "geometry": "proxy-plate",
+      "material": "glass",
+      "transform": {
+        "position": [
+          -7.71034849347184,
+          0,
+          -2.52517760571874
+        ],
+        "rotation": [
+          0,
+          -90,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 2628,
+        "globalId": "3cUkl32yn9qRSPvBJVyW_5",
+        "placementId": 2627
+      },
+      "properties": {
+        "ExpressId": "2628",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyW_5",
+        "IfcType": "IFCPLATE",
+        "ObjectType": "Glazed",
+        "Placement": "#2627",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-2730",
+      "type": "IFCPLATE",
+      "name": "System Panel:Glazed:285588",
+      "geometry": "proxy-plate",
+      "material": "glass",
+      "transform": {
+        "position": [
+          -7.71034849347185,
+          0,
+          -0.640177605718737
+        ],
+        "rotation": [
+          0,
+          -90,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 2730,
+        "globalId": "3cUkl32yn9qRSPvBJVyW_3",
+        "placementId": 2729
+      },
+      "properties": {
+        "ExpressId": "2730",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyW_3",
+        "IfcType": "IFCPLATE",
+        "ObjectType": "Glazed",
+        "Placement": "#2729",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-2826",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "proxy-member",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -7.74984849347185,
+          2.73113279632622,
+          1.24801293875303
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 2826,
+        "globalId": "09J5N7xMHBfQZeQGAEMomB",
+        "placementId": 2762
+      },
+      "properties": {
+        "ExpressId": "2826",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomB",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#2762",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-2972",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "proxy-member",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -7.74984849347184,
+          2.4555047724404497,
+          -2.51581545329329
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 2972,
+        "globalId": "09J5N7xMHBfQZeQGAEMom8",
+        "placementId": 2914
+      },
+      "properties": {
+        "ExpressId": "2972",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMom8",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#2914",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-3063",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "proxy-member",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -7.74984849347185,
+          3.20411842378066,
+          -0.6369870612469429
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3063,
+        "globalId": "09J5N7xMHBfQZeQGAEMom9",
+        "placementId": 3005
+      },
+      "properties": {
+        "ExpressId": "3063",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMom9",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#3005",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-3115",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x1840x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -7.73484849347184,
+          0.935000000000005,
+          -4.37858233348283
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3115,
+        "globalId": "09J5N7xMHBfQZeQGAEMom7",
+        "placementId": 3096
+      },
+      "properties": {
+        "ExpressId": "3115",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMom7",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#3096",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#3108",
+        "Solid": "#3104",
+        "Profile": "#3100"
+      }
+    },
+    {
+      "id": "ifc-3167",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x1855x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -7.73484849347184,
+          0.942500000000005,
+          -2.5085823334828303
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3167,
+        "globalId": "09J5N7xMHBfQZeQGAEMom4",
+        "placementId": 3148
+      },
+      "properties": {
+        "ExpressId": "3167",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMom4",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#3148",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#3160",
+        "Solid": "#3156",
+        "Profile": "#3152"
+      }
+    },
+    {
+      "id": "ifc-3219",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x1840x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -7.73484849347185,
+          0.935000000000005,
+          -0.623582333482821
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3219,
+        "globalId": "09J5N7xMHBfQZeQGAEMom5",
+        "placementId": 3200
+      },
+      "properties": {
+        "ExpressId": "3219",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMom5",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#3200",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#3212",
+        "Solid": "#3208",
+        "Profile": "#3204"
+      }
+    },
+    {
+      "id": "ifc-3279",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "proxy-member",
+      "material": "steel",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3279,
+        "globalId": "09J5N7xMHBfQZeQGAEMom3",
+        "placementId": 3252
+      },
+      "properties": {
+        "ExpressId": "3279",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMom3",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#3252",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-3339",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "proxy-member",
+      "material": "steel",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3339,
+        "globalId": "09J5N7xMHBfQZeQGAEMom0",
+        "placementId": 3312
+      },
+      "properties": {
+        "ExpressId": "3339",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMom0",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#3312",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-3447",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "proxy-member",
+      "material": "steel",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3447,
+        "globalId": "09J5N7xMHBfQZeQGAEMom1",
+        "placementId": 3372
+      },
+      "properties": {
+        "ExpressId": "3447",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMom1",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#3372",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-3555",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "proxy-member",
+      "material": "steel",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3555,
+        "globalId": "09J5N7xMHBfQZeQGAEMomU",
+        "placementId": 3480
+      },
+      "properties": {
+        "ExpressId": "3555",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomU",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#3480",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-3818",
+      "type": "IFCCURTAINWALL",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:285684",
+      "geometry": "proxy-curtainwall",
+      "material": "glass",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3818,
+        "globalId": "3cUkl32yn9qRSPvBJVyW$Z",
+        "placementId": 3817
+      },
+      "properties": {
+        "ExpressId": "3818",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyW$Z",
+        "IfcType": "IFCCURTAINWALL",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:29096",
+        "Placement": "#3817",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-3858",
+      "type": "IFCPLATE",
+      "name": "System Panel:Glazed:285685",
+      "geometry": "proxy-plate",
+      "material": "glass",
+      "transform": {
+        "position": [
+          -7.73484849347185,
+          0,
+          1.2219176665171798
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3858,
+        "globalId": "3cUkl32yn9qRSPvBJVyW$Y",
+        "placementId": 3856
+      },
+      "properties": {
+        "ExpressId": "3858",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyW$Y",
+        "IfcType": "IFCPLATE",
+        "ObjectType": "Glazed",
+        "Placement": "#3856",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-3905",
+      "type": "IFCPLATE",
+      "name": "System Panel:Glazed:285688",
+      "geometry": "proxy-plate",
+      "material": "glass",
+      "transform": {
+        "position": [
+          -6.101515160138519,
+          0,
+          1.22191766651719
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3905,
+        "globalId": "3cUkl32yn9qRSPvBJVyW$l",
+        "placementId": 3904
+      },
+      "properties": {
+        "ExpressId": "3905",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyW$l",
+        "IfcType": "IFCPLATE",
+        "ObjectType": "Glazed",
+        "Placement": "#3904",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-3951",
+      "type": "IFCPLATE",
+      "name": "System Panel:Glazed:285690",
+      "geometry": "proxy-plate",
+      "material": "glass",
+      "transform": {
+        "position": [
+          -4.46818182680518,
+          0,
+          1.22191766651719
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 3951,
+        "globalId": "3cUkl32yn9qRSPvBJVyW$j",
+        "placementId": 3950
+      },
+      "properties": {
+        "ExpressId": "3951",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyW$j",
+        "IfcType": "IFCPLATE",
+        "ObjectType": "Glazed",
+        "Placement": "#3950",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-4005",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x1588x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -2.8648484934718494,
+          3.530479349904855,
+          1.246417666517195
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4005,
+        "globalId": "09J5N7xMHBfQZeQGAEMomS",
+        "placementId": 3986
+      },
+      "properties": {
+        "ExpressId": "4005",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomS",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#3986",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#3998",
+        "Solid": "#3994",
+        "Profile": "#3990"
+      }
+    },
+    {
+      "id": "ifc-4057",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x1588x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -6.11651516013852,
+          3.530479349904855,
+          1.246417666517185
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4057,
+        "globalId": "09J5N7xMHBfQZeQGAEMomT",
+        "placementId": 4038
+      },
+      "properties": {
+        "ExpressId": "4057",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomT",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#4038",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#4050",
+        "Solid": "#4046",
+        "Profile": "#4042"
+      }
+    },
+    {
+      "id": "ifc-4109",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x1603x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -4.48318182680518,
+          3.5379793499048553,
+          1.2464176665171844
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4109,
+        "globalId": "09J5N7xMHBfQZeQGAEMomQ",
+        "placementId": 4090
+      },
+      "properties": {
+        "ExpressId": "4109",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomQ",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#4090",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#4102",
+        "Solid": "#4098",
+        "Profile": "#4094"
+      }
+    },
+    {
+      "id": "ifc-4161",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x1588x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -7.70484849347185,
+          0.809166666666665,
+          1.2464176665171847
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4161,
+        "globalId": "09J5N7xMHBfQZeQGAEMomR",
+        "placementId": 4142
+      },
+      "properties": {
+        "ExpressId": "4161",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomR",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#4142",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#4154",
+        "Solid": "#4150",
+        "Profile": "#4146"
+      }
+    },
+    {
+      "id": "ifc-4213",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x1603x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -6.08651516013852,
+          0.8166666666666651,
+          1.2464176665171944
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4213,
+        "globalId": "09J5N7xMHBfQZeQGAEMomO",
+        "placementId": 4194
+      },
+      "properties": {
+        "ExpressId": "4213",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomO",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#4194",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#4206",
+        "Solid": "#4202",
+        "Profile": "#4198"
+      }
+    },
+    {
+      "id": "ifc-4265",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x1588x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -4.453181826805181,
+          0.809166666666665,
+          1.246417666517195
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4265,
+        "globalId": "09J5N7xMHBfQZeQGAEMomP",
+        "placementId": 4246
+      },
+      "properties": {
+        "ExpressId": "4265",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomP",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#4246",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#4258",
+        "Solid": "#4254",
+        "Profile": "#4250"
+      }
+    },
+    {
+      "id": "ifc-4317",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x2751x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -2.8498484934718493,
+          1.375656341619095,
+          1.2464176665172
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4317,
+        "globalId": "09J5N7xMHBfQZeQGAEMomM",
+        "placementId": 4298
+      },
+      "properties": {
+        "ExpressId": "4317",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomM",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#4298",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#4310",
+        "Solid": "#4306",
+        "Profile": "#4302"
+      }
+    },
+    {
+      "id": "ifc-4369",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x2751x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -7.71984849347185,
+          4.126969024857285,
+          1.24641766651718
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4369,
+        "globalId": "09J5N7xMHBfQZeQGAEMomN",
+        "placementId": 4350
+      },
+      "properties": {
+        "ExpressId": "4369",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomN",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#4350",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#4362",
+        "Solid": "#4358",
+        "Profile": "#4354"
+      }
+    },
+    {
+      "id": "ifc-4421",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x2751x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -6.101515160138519,
+          1.375656341619095,
+          1.24641766651719
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4421,
+        "globalId": "09J5N7xMHBfQZeQGAEMomK",
+        "placementId": 4402
+      },
+      "properties": {
+        "ExpressId": "4421",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomK",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#4402",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#4414",
+        "Solid": "#4410",
+        "Profile": "#4406"
+      }
+    },
+    {
+      "id": "ifc-4473",
+      "type": "IFCMEMBER",
+      "name": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+      "geometry": "box-ifcmember-30x2751x30",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -4.46818182680518,
+          1.375656341619095,
+          1.2464176665172
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4473,
+        "globalId": "09J5N7xMHBfQZeQGAEMomL",
+        "placementId": 4454
+      },
+      "properties": {
+        "ExpressId": "4473",
+        "GlobalId": "09J5N7xMHBfQZeQGAEMomL",
+        "IfcType": "IFCMEMBER",
+        "ObjectType": "Curtain Wall:Curtain_Wall-Exterior_Glazing:8490",
+        "Placement": "#4454",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#4466",
+        "Solid": "#4462",
+        "Profile": "#4458"
+      }
+    },
+    {
+      "id": "ifc-4705",
+      "type": "IFCWALLSTANDARDCASE",
+      "name": "Basic Wall:Wall-Partn_12P-70MStd-12P:285792",
+      "geometry": "proxy-wall",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          1.6201515065281602,
+          0,
+          -4.4085823334828005
+        ],
+        "rotation": [
+          0,
+          -90,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4705,
+        "globalId": "3cUkl32yn9qRSPvBJVyWXt",
+        "placementId": 4660
+      },
+      "properties": {
+        "ExpressId": "4705",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWXt",
+        "IfcType": "IFCWALLSTANDARDCASE",
+        "ObjectType": "Basic Wall:Wall-Partn_12P-70MStd-12P:45397",
+        "Placement": "#4660",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-4880",
+      "type": "IFCWALLSTANDARDCASE",
+      "name": "Basic Wall:Wall-Partn_12P-70MStd-12P:285846",
+      "geometry": "proxy-wall",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          1.66765150652815,
+          0,
+          -0.898582333482796
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 4880,
+        "globalId": "3cUkl32yn9qRSPvBJVyWY1",
+        "placementId": 4841
+      },
+      "properties": {
+        "ExpressId": "4880",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWY1",
+        "IfcType": "IFCWALLSTANDARDCASE",
+        "ObjectType": "Basic Wall:Wall-Partn_12P-70MStd-12P:45397",
+        "Placement": "#4841",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-10993",
+      "type": "IFCDOOR",
+      "name": "Doors_ExtDbl_Flush:1810x2110mm:285860",
+      "geometry": "proxy-door",
+      "material": "door",
+      "transform": {
+        "position": [
+          2.9889015065281503,
+          0,
+          1.39141766651721
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 10993,
+        "globalId": "3cUkl32yn9qRSPvBJVyWYp",
+        "placementId": 83613
+      },
+      "properties": {
+        "ExpressId": "10993",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWYp",
+        "IfcType": "IFCDOOR",
+        "ObjectType": "1810x2110mm",
+        "Placement": "#83613",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-21827",
+      "type": "IFCDOOR",
+      "name": "Doors_IntSgl:810x2110mm:285959",
+      "geometry": "proxy-door",
+      "material": "door",
+      "transform": {
+        "position": [
+          1.6676515065281523,
+          0,
+          0.5301676665172099
+        ],
+        "rotation": [
+          0,
+          90,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 21827,
+        "globalId": "3cUkl32yn9qRSPvBJVyWaG",
+        "placementId": 83537
+      },
+      "properties": {
+        "ExpressId": "21827",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWaG",
+        "IfcType": "IFCDOOR",
+        "ObjectType": "810x2110mm",
+        "Placement": "#83537",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-32626",
+      "type": "IFCDOOR",
+      "name": "Doors_IntSgl:810x2110mm:285996",
+      "geometry": "proxy-door",
+      "material": "door",
+      "transform": {
+        "position": [
+          1.5726515065281579,
+          0,
+          -3.0823323334827903
+        ],
+        "rotation": [
+          0,
+          -90,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 32626,
+        "globalId": "3cUkl32yn9qRSPvBJVyWax",
+        "placementId": 83573
+      },
+      "properties": {
+        "ExpressId": "32626",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWax",
+        "IfcType": "IFCDOOR",
+        "ObjectType": "810x2110mm",
+        "Placement": "#83573",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-33350",
+      "type": "IFCWINDOW",
+      "name": "Windows_Sgl_Plain:1810x1210mm:286105",
+      "geometry": "proxy-window",
+      "material": "glass",
+      "transform": {
+        "position": [
+          2.98890150652816,
+          0.9,
+          -4.40858233348283
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 33350,
+        "globalId": "3cUkl32yn9qRSPvBJVyWcE",
+        "placementId": 83651
+      },
+      "properties": {
+        "ExpressId": "33350",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWcE",
+        "IfcType": "IFCWINDOW",
+        "ObjectType": "1810x1210mm",
+        "Placement": "#83651",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-33515",
+      "type": "IFCWINDOW",
+      "name": "Windows_Sgl_Plain:1810x1210mm:286188",
+      "geometry": "proxy-window",
+      "material": "glass",
+      "transform": {
+        "position": [
+          -2.13734849347184,
+          0.9,
+          -4.40858233348283
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 33515,
+        "globalId": "3cUkl32yn9qRSPvBJVyWdx",
+        "placementId": 83687
+      },
+      "properties": {
+        "ExpressId": "33515",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWdx",
+        "IfcType": "IFCWINDOW",
+        "ObjectType": "1810x1210mm",
+        "Placement": "#83687",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-33588",
+      "type": "IFCWINDOW",
+      "name": "Windows_Sgl_Plain:1810x1210mm:286238",
+      "geometry": "proxy-window",
+      "material": "glass",
+      "transform": {
+        "position": [
+          -6.13484849347184,
+          0.9,
+          -4.40858233348283
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 33588,
+        "globalId": "3cUkl32yn9qRSPvBJVyWe9",
+        "placementId": 83723
+      },
+      "properties": {
+        "ExpressId": "33588",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWe9",
+        "IfcType": "IFCWINDOW",
+        "ObjectType": "1810x1210mm",
+        "Placement": "#83723",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-33951",
+      "type": "IFCSLAB",
+      "name": "Floor:Floor-Grnd-Susp_65Scr-80Ins-100Blk-75PC:286349",
+      "geometry": "box-ifcslab-8668x470x16868",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          -0.8010984934718459,
+          0.23500000000000001,
+          -1.5873323334828002
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 33951,
+        "globalId": "3cUkl32yn9qRSPvBJVyWgQ",
+        "placementId": 33928
+      },
+      "properties": {
+        "ExpressId": "33951",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWgQ",
+        "IfcType": "IFCSLAB",
+        "ObjectType": "Floor:Floor-Grnd-Susp_65Scr-80Ins-100Blk-75PC",
+        "Placement": "#33928",
+        "GeometrySource": "rectangle-extrude",
+        "ShapeRepresentation": "#33946",
+        "Solid": "#33936",
+        "Profile": "#33932"
+      }
+    },
+    {
+      "id": "ifc-35959",
+      "type": "IFCROOF",
+      "name": "Basic Roof:Roof_Flat-4Felt-150Ins-50Scr-150Conc-12Plr:286419",
+      "geometry": "box-ifcroof-14841x1734x7285",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          -1.010339417578221,
+          2.6083684759388754,
+          -1.7027472111685684
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 35959,
+        "globalId": "3cUkl32yn9qRSPvBJVyWh4",
+        "placementId": 34171
+      },
+      "properties": {
+        "ExpressId": "35959",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyWh4",
+        "IfcType": "IFCROOF",
+        "ObjectType": "Basic Roof:Roof_Flat-4Felt-150Ins-50Scr-150Conc-12Plr:45441",
+        "Placement": "#34171",
+        "GeometrySource": "brep-bounds-box",
+        "ShapeRepresentation": "#35952",
+        "Solid": "#35948",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-36107",
+      "type": "IFCWINDOW",
+      "name": "Windows_Sgl_Plain:1810x1210mm:287567",
+      "geometry": "proxy-window",
+      "material": "glass",
+      "transform": {
+        "position": [
+          0.2739015065281501,
+          0.9,
+          1.10141766651721
+        ],
+        "rotation": [
+          0,
+          180,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 36107,
+        "globalId": "3cUkl32yn9qRSPvBJVyZTO",
+        "placementId": 83759
+      },
+      "properties": {
+        "ExpressId": "36107",
+        "GlobalId": "3cUkl32yn9qRSPvBJVyZTO",
+        "IfcType": "IFCWINDOW",
+        "ObjectType": "1810x1210mm",
+        "Placement": "#83759",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-78145",
+      "type": "IFCSLAB",
+      "name": "Floor:Simple floor:295048",
+      "geometry": "proxy-slab",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          0,
+          2.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 78145,
+        "globalId": "3ntFzSulnDNeQ4nJrMgcOt",
+        "placementId": 78115
+      },
+      "properties": {
+        "ExpressId": "78145",
+        "GlobalId": "3ntFzSulnDNeQ4nJrMgcOt",
+        "IfcType": "IFCSLAB",
+        "ObjectType": "Floor:Simple floor",
+        "Placement": "#78115",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    }
+  ]
+}

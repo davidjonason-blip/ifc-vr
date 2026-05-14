@@ -1,0 +1,164 @@
+{
+  "format": "vr-ifc",
+  "version": "0.0.1",
+  "generator": "VR-IFC hand sample",
+  "units": "m",
+  "axis": "Y_UP",
+  "project": {
+    "name": "VR-IFC Sample Building",
+    "site": "Local test"
+  },
+  "materials": [
+    { "id": "concrete", "color": "#aeb9c8", "roughness": 0.82 },
+    { "id": "glass", "color": "#67e8f9", "roughness": 0.18, "opacity": 0.42 },
+    { "id": "steel", "color": "#64748b", "roughness": 0.58 },
+    { "id": "supply", "color": "#38bdf8", "roughness": 0.5 },
+    { "id": "return", "color": "#f59e0b", "roughness": 0.5 }
+  ],
+  "geometries": [
+    { "id": "slab-12x8x03", "kind": "box", "size": [12, 0.3, 8] },
+    { "id": "wall-long", "kind": "box", "size": [12, 3, 0.22] },
+    { "id": "wall-short", "kind": "box", "size": [0.22, 3, 8] },
+    { "id": "window", "kind": "box", "size": [1.5, 1.2, 0.08] },
+    { "id": "duct-long", "kind": "box", "size": [8, 0.28, 0.28] },
+    { "id": "duct-branch", "kind": "box", "size": [0.28, 0.28, 4] },
+    { "id": "column", "kind": "box", "size": [0.35, 3.2, 0.35] }
+  ],
+  "elements": [
+    {
+      "id": "slab-001",
+      "type": "IfcSlab",
+      "name": "Plan 01 bjälklag",
+      "geometry": "slab-12x8x03",
+      "material": "concrete",
+      "transform": { "position": [0, 0, 0] },
+      "properties": { "System": "A", "Level": "01" }
+    },
+    {
+      "id": "slab-002",
+      "type": "IfcSlab",
+      "name": "Plan 02 bjälklag",
+      "geometry": "slab-12x8x03",
+      "material": "concrete",
+      "transform": { "position": [0, 3.2, 0] },
+      "properties": { "System": "A", "Level": "02" }
+    },
+    {
+      "id": "wall-north-001",
+      "type": "IfcWall",
+      "name": "Yttervägg norr",
+      "geometry": "wall-long",
+      "material": "concrete",
+      "transform": { "position": [0, 1.6, -4] },
+      "properties": { "FireRating": "EI60", "Level": "01" }
+    },
+    {
+      "id": "wall-south-001",
+      "type": "IfcWall",
+      "name": "Yttervägg söder",
+      "geometry": "wall-long",
+      "material": "concrete",
+      "transform": { "position": [0, 1.6, 4] },
+      "properties": { "FireRating": "EI60", "Level": "01" }
+    },
+    {
+      "id": "wall-west-001",
+      "type": "IfcWall",
+      "name": "Yttervägg väst",
+      "geometry": "wall-short",
+      "material": "concrete",
+      "transform": { "position": [-6, 1.6, 0] },
+      "properties": { "FireRating": "EI60", "Level": "01" }
+    },
+    {
+      "id": "wall-east-001",
+      "type": "IfcWall",
+      "name": "Yttervägg öst",
+      "geometry": "wall-short",
+      "material": "concrete",
+      "transform": { "position": [6, 1.6, 0] },
+      "properties": { "FireRating": "EI60", "Level": "01" }
+    },
+    {
+      "id": "column-001",
+      "type": "IfcColumn",
+      "name": "Pelare A1",
+      "geometry": "column",
+      "material": "steel",
+      "transform": { "position": [-4, 1.6, -2.5] },
+      "properties": { "Grid": "A1" }
+    },
+    {
+      "id": "column-002",
+      "type": "IfcColumn",
+      "name": "Pelare A2",
+      "geometry": "column",
+      "material": "steel",
+      "transform": { "position": [4, 1.6, -2.5] },
+      "properties": { "Grid": "A2" }
+    },
+    {
+      "id": "column-003",
+      "type": "IfcColumn",
+      "name": "Pelare B1",
+      "geometry": "column",
+      "material": "steel",
+      "transform": { "position": [-4, 1.6, 2.5] },
+      "properties": { "Grid": "B1" }
+    },
+    {
+      "id": "column-004",
+      "type": "IfcColumn",
+      "name": "Pelare B2",
+      "geometry": "column",
+      "material": "steel",
+      "transform": { "position": [4, 1.6, 2.5] },
+      "properties": { "Grid": "B2" }
+    },
+    {
+      "id": "window-001",
+      "type": "IfcWindow",
+      "name": "Fönster öst 01",
+      "geometry": "window",
+      "material": "glass",
+      "transform": { "position": [6.13, 1.8, -1.8], "rotation": [0, 90, 0] },
+      "properties": { "Level": "01" }
+    },
+    {
+      "id": "window-002",
+      "type": "IfcWindow",
+      "name": "Fönster öst 02",
+      "geometry": "window",
+      "material": "glass",
+      "transform": { "position": [6.13, 1.8, 1.8], "rotation": [0, 90, 0] },
+      "properties": { "Level": "01" }
+    },
+    {
+      "id": "duct-s-001",
+      "type": "IfcDuctSegment",
+      "name": "Tilluft huvudkanal",
+      "geometry": "duct-long",
+      "material": "supply",
+      "transform": { "position": [0, 2.65, -1.6] },
+      "properties": { "System": "SA", "Flow": "420 l/s" }
+    },
+    {
+      "id": "duct-s-002",
+      "type": "IfcDuctSegment",
+      "name": "Tilluft gren",
+      "geometry": "duct-branch",
+      "material": "supply",
+      "transform": { "position": [-2.5, 2.65, 0.4] },
+      "properties": { "System": "SA", "Flow": "120 l/s" }
+    },
+    {
+      "id": "duct-r-001",
+      "type": "IfcDuctSegment",
+      "name": "Frånluft huvudkanal",
+      "geometry": "duct-long",
+      "material": "return",
+      "transform": { "position": [0, 2.25, 1.7] },
+      "properties": { "System": "EA", "Flow": "380 l/s" }
+    }
+  ]
+}

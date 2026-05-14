@@ -1,0 +1,211 @@
+{
+  "summary": {
+    "score": 100,
+    "level": "good",
+    "products": 15402,
+    "elements": 15402,
+    "skippedNoRepresentation": 0,
+    "skippedProducts": [],
+    "skippedByReason": {},
+    "representationElements": 15402,
+    "overviewFallbackElements": 0,
+    "visualOverlayElements": 0,
+    "finalGeometryElements": 15402,
+    "typeProxyElements": 0,
+    "styledColorCount": 15402,
+    "visualMaterialCount": 15402,
+    "styledMaterialCoverage": 1,
+    "visualMaterialCoverage": 1,
+    "geometryCoverage": 1,
+    "runtimeRepresentationCoverage": 1,
+    "overviewMode": "auto",
+    "overviewApplied": false,
+    "visualOverlayApplied": false,
+    "rawVisualMinThickness": 0,
+    "rawEnhancedGeometryCount": 0,
+    "linearMepRuntimeCount": 69,
+    "mepNodeRuntimeCount": 1826,
+    "boxMepRuntimeCount": 768,
+    "materialFinishClasses": {
+      "mep": 15168,
+      "authored": 118,
+      "mineral": 116
+    },
+    "materialRoles": {
+      "duct": 12873,
+      "terminal": 1328,
+      "equipment": 967,
+      "authored-color": 118,
+      "generic-mineral": 116
+    }
+  },
+  "geometrySources": {
+    "mapped-surface-model-mesh-box-mep": 768,
+    "mapped-surface-model-mesh": 12739,
+    "mapped-surface-model-mesh-mep-node": 1826,
+    "mapped-surface-model-mesh-linear-mep": 69
+  },
+  "fallbackReasons": {
+    "resolved-mesh": 15402
+  },
+  "disciplines": {
+    "mep": 15168,
+    "proxy": 234
+  },
+  "geometryAudit": {
+    "schema": "geometry-audit-v1",
+    "summary": {
+      "elements": 15402,
+      "geometries": 2042,
+      "mappedElements": 15402,
+      "profileElements": 0,
+      "solidElements": 15402,
+      "surfaceOnlyElements": 0,
+      "thinSurfaceMepElements": 0,
+      "mepNodeElements": 1826,
+      "boxMepElements": 768,
+      "linearMepCandidates": 67,
+      "visuallyInflatedGeometries": 0,
+      "localBoxPrismGeometries": 0,
+      "thinAxisP10": 0.12,
+      "thinAxisMedian": 0.4,
+      "thinAxisP90": 0.4
+    },
+    "classes": {
+      "box-mep": 768,
+      "surface-mesh": 12739,
+      "mep-node": 1826,
+      "linear-mep": 69
+    },
+    "byType": {
+      "IFCFLOWTERMINAL": {
+        "box-mep": 531,
+        "mep-node": 341,
+        "surface-mesh": 456
+      },
+      "IFCFLOWSEGMENT": {
+        "surface-mesh": 7117,
+        "linear-mep": 20,
+        "box-mep": 7
+      },
+      "IFCFLOWCONTROLLER": {
+        "box-mep": 15,
+        "surface-mesh": 478,
+        "mep-node": 100
+      },
+      "IFCFLOWFITTING": {
+        "mep-node": 1385,
+        "surface-mesh": 4230,
+        "linear-mep": 15,
+        "box-mep": 99
+      },
+      "IFCFLOWTREATMENTDEVICE": {
+        "surface-mesh": 340,
+        "linear-mep": 34
+      },
+      "IFCBUILDINGELEMENTPROXY": {
+        "surface-mesh": 118,
+        "box-mep": 116
+      }
+    },
+    "bySource": {
+      "mapped-surface-model-mesh-box-mep": {
+        "box-mep": 768
+      },
+      "mapped-surface-model-mesh": {
+        "surface-mesh": 12739
+      },
+      "mapped-surface-model-mesh-mep-node": {
+        "mep-node": 1826
+      },
+      "mapped-surface-model-mesh-linear-mep": {
+        "linear-mep": 69
+      }
+    },
+    "byDiscipline": {
+      "mep": {
+        "box-mep": 652,
+        "surface-mesh": 12621,
+        "mep-node": 1826,
+        "linear-mep": 69
+      },
+      "proxy": {
+        "surface-mesh": 118,
+        "box-mep": 116
+      }
+    }
+  },
+  "bounds": {
+    "full": {
+      "min": [
+        -50,
+        0,
+        -498.1794
+      ],
+      "max": [
+        618.77778,
+        36.68,
+        50
+      ],
+      "center": [
+        284.38889,
+        18.34,
+        -224.0897
+      ],
+      "size": [
+        668.77778,
+        36.68,
+        548.1794
+      ]
+    },
+    "robust": {
+      "min": [
+        445.6754,
+        4.59,
+        -486.55885
+      ],
+      "max": [
+        613.14195,
+        24.27,
+        -312.96533
+      ],
+      "center": [
+        529.40868,
+        14.43,
+        -399.76209
+      ],
+      "size": [
+        167.46655,
+        19.68,
+        173.59352
+      ]
+    },
+    "outlierElements": 829
+  },
+  "warnings": [
+    {
+      "code": "linear-mep-runtime",
+      "severity": "info",
+      "count": 69,
+      "message": "Thin linear MEP surface meshes were converted to lightweight linear runtime geometry while preserving original product identity."
+    },
+    {
+      "code": "mep-node-runtime",
+      "severity": "info",
+      "count": 1826,
+      "message": "Compact MEP fittings/controllers were converted to lightweight node runtime geometry while preserving original product identity."
+    },
+    {
+      "code": "box-mep-runtime",
+      "severity": "info",
+      "count": 768,
+      "message": "Thin non-linear MEP surface meshes were converted to local bbox runtime geometry while preserving original product identity."
+    },
+    {
+      "code": "spatial-outliers",
+      "severity": "warn",
+      "count": 829,
+      "message": "Element centers outside the 1-99 percentile robust bounds may make framing and scale harder to inspect."
+    }
+  ]
+}

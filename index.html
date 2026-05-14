@@ -1,0 +1,3099 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VR-IFC v0.0.1</title>
+  <style>
+    :root {
+      --bg: #080a0e;
+      --panel: rgba(15, 18, 24, 0.88);
+      --panel-strong: rgba(15, 18, 24, 0.96);
+      --text: #edf2f7;
+      --muted: #9aa7b6;
+      --border: rgba(148, 163, 184, 0.22);
+      --accent: #38bdf8;
+      --accent-2: #f59e0b;
+      --ok: #34d399;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+    }
+
+    #canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #080a0e;
+    }
+
+    .topbar {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .brand,
+    .toolbar,
+    .panel {
+      pointer-events: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+    }
+
+    .brand {
+      min-width: 190px;
+      border-radius: 8px;
+      padding: 9px 12px;
+    }
+
+    .brand-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+      line-height: 1.1;
+    }
+
+    .brand-sub {
+      margin-top: 3px;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+      border-radius: 8px;
+      padding: 6px;
+      max-width: calc(100vw - 226px);
+    }
+
+    button, label.file-button {
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      font: 600 12px/1 Inter, system-ui, sans-serif;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 10px;
+      white-space: nowrap;
+    }
+
+    select {
+      height: 32px;
+      max-width: 150px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      font: 600 12px/1 Inter, system-ui, sans-serif;
+      padding: 0 8px;
+    }
+
+    option {
+      background: #111827;
+      color: var(--text);
+    }
+
+    button:hover, label.file-button:hover {
+      border-color: rgba(56, 189, 248, 0.6);
+      color: white;
+    }
+
+    button.active {
+      border-color: rgba(52, 211, 153, 0.8);
+      background: rgba(52, 211, 153, 0.13);
+      color: var(--ok);
+    }
+
+    input[type="file"] { display: none; }
+
+    .panel {
+      position: absolute;
+      right: 12px;
+      top: 68px;
+      width: min(360px, calc(100vw - 24px));
+      max-height: calc(100vh - 92px);
+      overflow: auto;
+      border-radius: 8px;
+      padding: 12px;
+      z-index: 4;
+    }
+
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: 6px 10px;
+      font-size: 12px;
+    }
+
+    .k {
+      color: var(--muted);
+      font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .v {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      color: var(--text);
+    }
+
+    .project-overview {
+      display: grid;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .project-overview.hidden { display: none; }
+
+    .finish-overview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .finish-chip {
+      min-height: 26px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.045);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 8px;
+      font: 700 11px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .finish-chip .legend-swatch {
+      width: 9px;
+      height: 9px;
+    }
+
+    .project-overview-row {
+      width: 100%;
+      height: auto;
+      min-height: 38px;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 7px 8px;
+      text-align: left;
+      white-space: normal;
+    }
+
+    .project-overview-main {
+      min-width: 0;
+      display: grid;
+      gap: 3px;
+    }
+
+    .project-overview-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .project-overview-meta {
+      color: var(--muted);
+      font: 11px/1.35 "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .project-overview-score {
+      flex: 0 0 auto;
+      color: var(--ok);
+      font: 700 11px/1.2 "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .drop {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .drop-card {
+      width: min(440px, calc(100vw - 32px));
+      border: 1px dashed rgba(148, 163, 184, 0.36);
+      border-radius: 8px;
+      background: rgba(8, 10, 14, 0.78);
+      padding: 18px;
+      text-align: center;
+      pointer-events: auto;
+    }
+
+    .drop-card strong {
+      display: block;
+      font-size: 17px;
+      margin-bottom: 6px;
+    }
+
+    .drop-card span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .drop.hidden { display: none; }
+
+    .status {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      max-width: min(720px, calc(100vw - 24px));
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--muted);
+      font: 12px/1.4 "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      padding: 8px 10px;
+      z-index: 4;
+    }
+
+    .diagnostics {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      width: min(360px, calc(100vw - 24px));
+      max-height: 42vh;
+      overflow: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(8, 10, 14, 0.92);
+      color: var(--text);
+      font: 11px/1.45 "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      padding: 10px 12px;
+      z-index: 6;
+      pointer-events: none;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+    }
+
+    .diagnostics.hidden { display: none; }
+
+    .diagnostics strong {
+      display: block;
+      margin-bottom: 5px;
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 12px;
+    }
+
+    .diagnostics .warn { color: #fbbf24; }
+
+    .system-legend {
+      position: absolute;
+      left: 12px;
+      bottom: 54px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      max-width: min(760px, calc(100vw - 390px));
+      pointer-events: auto;
+      z-index: 4;
+    }
+
+    .system-legend.hidden { display: none; }
+
+    .legend-button {
+      height: 28px;
+      padding: 0 9px;
+      gap: 6px;
+      font-size: 11px;
+      background: var(--panel);
+    }
+
+    .legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      flex: 0 0 auto;
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .toolbar {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        max-width: none;
+      }
+
+      .panel {
+        left: 12px;
+        right: 12px;
+        width: auto;
+        top: auto;
+        bottom: 52px;
+        max-height: 42vh;
+      }
+
+      .system-legend {
+        max-width: calc(100vw - 24px);
+        bottom: 52px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="canvas"></canvas>
+
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-title">VR-IFC</div>
+        <div class="brand-sub">v0.0.1 · WebXR · .vrifc.json</div>
+      </div>
+      <div class="toolbar">
+        <label class="file-button" title="Ladda VR-IFC-format">
+          Öppna
+          <input id="file-input" type="file" accept=".json,.gz,.vrifc,.vrifc.json,.vrifc.json.gz,.bin" multiple>
+        </label>
+        <button id="visual-button" title="Växla mellan produktionsläge och debuglägen">Produktionsläge</button>
+        <button id="performance-button" title="Växla prestandaläge för stora projekt">Prestanda</button>
+        <button id="space-button" title="Visa eller dölj IFCSPACE-rum">Rum på</button>
+        <select id="model-filter" title="Filtrera per modell eller fil">
+          <option value="all">Alla modeller</option>
+        </select>
+        <select id="type-filter" title="Filtrera per IFC-typ">
+          <option value="all">Alla typer</option>
+        </select>
+        <select id="discipline-filter" title="Filtrera per disciplin">
+          <option value="all">Alla discipliner</option>
+        </select>
+        <select id="system-filter" title="Filtrera per tekniskt system">
+          <option value="all">Alla system</option>
+        </select>
+        <select id="runtime-filter" title="Filtrera per geometri-/runtime-lager">
+          <option value="all">Alla lager</option>
+        </select>
+        <button id="preset-coordination" title="Visa samordnad helmodell">Samordning</button>
+        <button id="preset-runs" title="Visa installationsstråk">Stråk</button>
+        <button id="preset-nodes" title="Visa kopplingar och komponentnoder">Noder</button>
+        <button id="preset-mesh" title="Visa kvarvarande meshgeometri">Mesh</button>
+        <button id="mode-button" title="Växla mellan bordsläge och 1:1">Bordsläge</button>
+        <button id="frame-button" title="Centrera modellen">Centrera</button>
+        <button id="hide-button" title="Dölj valt objekt">Dölj</button>
+        <button id="reset-button" title="Visa alla objekt">Visa alla</button>
+      </div>
+    </div>
+
+    <aside class="panel" id="props-panel">
+      <h2>Ingen modell laddad</h2>
+      <div class="kv" id="props"></div>
+      <div class="finish-overview hidden" id="finish-overview"></div>
+      <div class="project-overview hidden" id="project-overview"></div>
+    </aside>
+
+    <div class="system-legend hidden" id="system-legend"></div>
+
+    <div class="drop" id="drop">
+      <div class="drop-card">
+        <strong>Ladda VR-IFC-format</strong>
+        <span>Dra in en .vrifc.json-fil, välj fil, eller välj manifest + .geometry.bin tillsammans. Quest 3 öppnar VR-läge via knappen som visas av browsern när WebXR stöds.</span>
+      </div>
+    </div>
+
+    <div class="status" id="status">Redo. VR-IFC v0.0.1 startad.</div>
+    <div class="diagnostics" id="diagnostics">
+      <strong>VR-IFC diagnostik</strong>
+      <div>HTML laddad. Väntar på JavaScript-modul...</div>
+    </div>
+  </div>
+
+  <script>
+    window.__vrIfcBootOk = false;
+    window.__vrIfcBootIssue = '';
+    function vrIfcBootStatus(message) {
+      window.__vrIfcBootIssue = message;
+      const status = document.getElementById('status');
+      if (status) status.textContent = message;
+      const diagnostics = document.getElementById('diagnostics');
+      if (diagnostics) {
+        diagnostics.classList.remove('hidden');
+        diagnostics.innerHTML = `<strong>VR-IFC diagnostik</strong><div class="warn">${message}</div>`;
+      }
+    }
+    window.addEventListener('error', (event) => {
+      if (window.__vrIfcBootOk) return;
+      const src = event.filename || event.target?.src || '';
+      const message = event.message || `Kunde inte läsa ${src || 'VR-IFC-modulen'}`;
+      vrIfcBootStatus(`VR-IFC startade inte: ${message}. Kontrollera att Three.js kan laddas och att sidan inte blockeras av file://.`);
+    }, true);
+    window.addEventListener('unhandledrejection', (event) => {
+      const reason = event.reason?.message || String(event.reason || 'okänt fel');
+      vrIfcBootStatus(`VR-IFC fel: ${reason}`);
+    });
+    window.setTimeout(() => {
+      if (!window.__vrIfcBootOk) {
+        vrIfcBootStatus('VR-IFC startar inte. Om du kör lokalt i Quest: kontrollera internet för Three.js-importer, eller kör sidan via en lokal webbserver.');
+      }
+    }, 9000);
+  </script>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.164.1/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.164.1/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { VRButton } from 'three/addons/webxr/VRButton.js';
+    import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+
+    window.__vrIfcBootOk = true;
+    document.body.dataset.vrifcBoot = 'ok';
+
+    const VERSION = '0.0.1';
+    const PERFORMANCE_DRAWABLE_THRESHOLD = 18000;
+
+    const canvas = document.getElementById('canvas');
+    const fileInput = document.getElementById('file-input');
+    const visualButton = document.getElementById('visual-button');
+    const performanceButton = document.getElementById('performance-button');
+    const spaceButton = document.getElementById('space-button');
+    const modelFilter = document.getElementById('model-filter');
+    const typeFilter = document.getElementById('type-filter');
+    const disciplineFilter = document.getElementById('discipline-filter');
+    const systemFilter = document.getElementById('system-filter');
+    const runtimeFilter = document.getElementById('runtime-filter');
+    const presetButtons = {
+      coordination: document.getElementById('preset-coordination'),
+      runs: document.getElementById('preset-runs'),
+      nodes: document.getElementById('preset-nodes'),
+      mesh: document.getElementById('preset-mesh')
+    };
+    const modeButton = document.getElementById('mode-button');
+    const frameButton = document.getElementById('frame-button');
+    const hideButton = document.getElementById('hide-button');
+    const resetButton = document.getElementById('reset-button');
+    const drop = document.getElementById('drop');
+    const propsPanel = document.getElementById('props-panel');
+    const props = document.getElementById('props');
+    const finishOverview = document.getElementById('finish-overview');
+    const projectOverview = document.getElementById('project-overview');
+    const statusEl = document.getElementById('status');
+    const diagnostics = document.getElementById('diagnostics');
+    const systemLegend = document.getElementById('system-legend');
+
+    const isQuestLikeBrowser = /Quest|OculusBrowser|Meta Quest/i.test(navigator.userAgent || '');
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x080a0e);
+    scene.fog = new THREE.FogExp2(0x080a0e, 0.018);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 20000);
+    camera.position.set(8, 7, 10);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: !isQuestLikeBrowser, powerPreference: isQuestLikeBrowser ? 'default' : 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isQuestLikeBrowser ? 1 : 1.75));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    renderer.xr.setReferenceSpaceType('local-floor');
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.96;
+    renderer.shadowMap.enabled = false;
+
+    document.body.appendChild(VRButton.createButton(renderer));
+
+    const root = new THREE.Group();
+    root.name = 'VRIFC_ROOT';
+    scene.add(root);
+
+    const cameraRig = new THREE.Group();
+    cameraRig.add(camera);
+    scene.add(cameraRig);
+
+    scene.add(new THREE.HemisphereLight(0xe8f2ff, 0x1f2937, 1.35));
+    const key = new THREE.DirectionalLight(0xffffff, 1.18);
+    key.position.set(4, 9, 5);
+    scene.add(key);
+    const fill = new THREE.DirectionalLight(0xb7d7ee, 0.34);
+    fill.position.set(-6, 4, -5);
+    scene.add(fill);
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(80, 80),
+      new THREE.MeshBasicMaterial({ color: 0x070b12, transparent: true, opacity: 0.78, side: THREE.DoubleSide })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.012;
+    scene.add(floor);
+    let activeFloorSize = 80;
+
+    const grid = new THREE.GridHelper(80, 80, 0x3b82f6, 0x172033);
+    grid.material.opacity = 0.34;
+    grid.material.transparent = true;
+    scene.add(grid);
+
+    const stageBox = new THREE.Box3();
+    const tablePlate = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({ color: 0x0f172a, transparent: true, opacity: 0.54, side: THREE.DoubleSide })
+    );
+    tablePlate.name = 'VRIFC_TABLE_PLATE';
+    tablePlate.rotation.x = -Math.PI / 2;
+    tablePlate.visible = false;
+    scene.add(tablePlate);
+
+    const modelFrame = new THREE.Box3Helper(stageBox, 0x38bdf8);
+    modelFrame.name = 'VRIFC_MODEL_FRAME';
+    modelFrame.material.transparent = true;
+    modelFrame.material.opacity = 0.55;
+    modelFrame.visible = false;
+    scene.add(modelFrame);
+
+    const selectionBox = new THREE.Box3();
+    const selectionFrame = new THREE.Box3Helper(selectionBox, 0xfacc15);
+    selectionFrame.name = 'VRIFC_SELECTION_FRAME';
+    selectionFrame.material.transparent = true;
+    selectionFrame.material.opacity = 0.92;
+    selectionFrame.visible = false;
+    scene.add(selectionFrame);
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const modelBox = new THREE.Box3();
+    const displayBox = new THREE.Box3();
+    const filteredDisplayBox = new THREE.Box3();
+    const currentMaterialDefs = new Map();
+    const hiddenKeys = new Set();
+    const drawables = [];
+    const performanceBatches = [];
+    const controllerRays = [];
+
+    let currentDoc = null;
+    let currentRenderDoc = null;
+    let selected = null;
+    let tableMode = true;
+    let visualMode = 'production';
+    let performanceMode = false;
+    let showSpaces = true;
+    let pendingBinaryPackage = null;
+    let deferredDetailMeshCount = 0;
+    let deferredDetailDrawableCount = 0;
+    let orbitTarget = new THREE.Vector3();
+    let isDragging = false;
+    let lastX = 0;
+    let lastY = 0;
+    let renderFrameCount = 0;
+    let lastDiagnosticUpdate = 0;
+    let xrState = 'inte startad';
+
+    initControllers();
+    bindDom();
+    showWelcome();
+    loadHashModel();
+    bindRendererDiagnostics();
+
+    renderer.setAnimationLoop(() => {
+      renderFrameCount++;
+      updateControllerRays();
+      renderer.render(scene, camera);
+      updateDiagnosticsPanel();
+    });
+
+    function initControllers() {
+      const controllerModelFactory = new XRControllerModelFactory();
+
+      for (let i = 0; i < 2; i++) {
+        const controller = renderer.xr.getController(i);
+        controller.userData.index = i;
+        controller.addEventListener('selectstart', () => selectFromController(controller));
+        scene.add(controller);
+
+        const lineGeo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(0, 0, 0),
+          new THREE.Vector3(0, 0, -1)
+        ]);
+        const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.82 });
+        const line = new THREE.Line(lineGeo, lineMat);
+        line.name = 'controller-ray';
+        line.scale.z = 12;
+        controller.add(line);
+        controllerRays.push({ controller, line });
+
+        const grip = renderer.xr.getControllerGrip(i);
+        grip.add(controllerModelFactory.createControllerModel(grip));
+        scene.add(grip);
+      }
+    }
+
+    function bindDom() {
+      window.addEventListener('resize', onResize);
+      fileInput.addEventListener('change', onFilePick);
+      visualButton.addEventListener('click', toggleVisualMode);
+      performanceButton.addEventListener('click', togglePerformanceMode);
+      spaceButton.addEventListener('click', toggleSpaces);
+      modelFilter.addEventListener('change', applyVisibilityFilters);
+      typeFilter.addEventListener('change', applyVisibilityFilters);
+      disciplineFilter.addEventListener('change', applyVisibilityFilters);
+      systemFilter.addEventListener('change', applyVisibilityFilters);
+      runtimeFilter.addEventListener('change', applyVisibilityFilters);
+      presetButtons.coordination.addEventListener('click', () => applyViewPreset('coordination'));
+      presetButtons.runs.addEventListener('click', () => applyViewPreset('runs'));
+      presetButtons.nodes.addEventListener('click', () => applyViewPreset('nodes'));
+      presetButtons.mesh.addEventListener('click', () => applyViewPreset('mesh'));
+      modeButton.addEventListener('click', toggleMode);
+      frameButton.addEventListener('click', frameModel);
+      hideButton.addEventListener('click', hideSelected);
+      resetButton.addEventListener('click', resetHidden);
+
+      canvas.addEventListener('pointerdown', onPointerDown);
+      canvas.addEventListener('pointermove', onPointerMove);
+      canvas.addEventListener('pointerup', () => { isDragging = false; });
+      canvas.addEventListener('pointerleave', () => { isDragging = false; });
+      canvas.addEventListener('click', onCanvasClick);
+      canvas.addEventListener('wheel', onWheel, { passive: false });
+
+      document.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        drop.classList.remove('hidden');
+      });
+      document.addEventListener('drop', onDrop);
+    }
+
+    function bindRendererDiagnostics() {
+      canvas.addEventListener('webglcontextlost', (event) => {
+        event.preventDefault();
+        xrState = 'WebGL-context tappad';
+        setStatus('WebGL-context tappad. Ladda om sidan i Quest Browser.');
+        updateDiagnosticsPanel(true);
+      });
+      canvas.addEventListener('webglcontextrestored', () => {
+        xrState = 'WebGL-context återställd';
+        setStatus('WebGL-context återställd.');
+        updateDiagnosticsPanel(true);
+      });
+      renderer.xr.addEventListener('sessionstart', () => {
+        xrState = 'XR-session aktiv';
+        setStatus('VR-läge startat.');
+        updateDiagnosticsPanel(true);
+      });
+      renderer.xr.addEventListener('sessionend', () => {
+        xrState = 'XR-session avslutad';
+        setStatus('VR-läge avslutat.');
+        updateDiagnosticsPanel(true);
+      });
+      if (navigator.xr?.isSessionSupported) {
+        navigator.xr.isSessionSupported('immersive-vr')
+          .then((supported) => {
+            xrState = supported ? 'immersive-vr stöds' : 'immersive-vr stöds inte';
+            updateDiagnosticsPanel(true);
+          })
+          .catch((error) => {
+            xrState = `XR-koll fel: ${error.message || error}`;
+            updateDiagnosticsPanel(true);
+          });
+      }
+      updateDiagnosticsPanel(true);
+    }
+
+    async function loadHashModel() {
+      const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const url = params.get('load');
+      if (!url) return;
+
+      await withStatusError(async () => {
+        setStatus('Laddar konverterad VRIFC...');
+        const response = await fetch(url, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`Kunde inte läsa VRIFC (${response.status})`);
+        const doc = await readVRIFCResponse(response);
+        await attachBinaryGeometryFromUrl(doc, url);
+        loadVRIFC(doc, 'converted.vrifc.json');
+      });
+    }
+
+    async function onFilePick(event) {
+      const files = [...(event.target.files || [])];
+      if (!files.length) return;
+      await withStatusError(() => loadFiles(files));
+      fileInput.value = '';
+    }
+
+    async function onDrop(event) {
+      event.preventDefault();
+      const files = [...(event.dataTransfer?.files || [])];
+      if (!files.length) return;
+      await withStatusError(() => loadFiles(files));
+    }
+
+    async function loadFile(file) {
+      await loadFiles([file]);
+    }
+
+    async function loadFiles(files) {
+      const manifestFiles = files.filter(isVRIFCManifestFile);
+      const binaryFiles = files.filter(isBinaryGeometryFile);
+      if (!manifestFiles.length) {
+        if (binaryFiles.length && pendingBinaryPackage) {
+          await attachBinaryGeometryFromFiles(pendingBinaryPackage.doc, binaryFiles);
+          const pending = pendingBinaryPackage;
+          pendingBinaryPackage = null;
+          loadVRIFC(pending.doc, pending.name);
+          return;
+        }
+        throw new Error('Välj först en .vrifc.json/.gz-fil. Om den kräver .geometry.bin kan du välja binärfilen direkt efteråt.');
+      }
+      const ignoredFiles = files.filter((file) => !isVRIFCManifestFile(file) && !isBinaryGeometryFile(file));
+      if (ignoredFiles.length) {
+        setStatus(`Ignorerar ${ignoredFiles.length} okända filer.`);
+      }
+      if (manifestFiles.length === 1) {
+        const { doc, name } = await readVRIFCFile(manifestFiles[0]);
+        if (needsBinaryGeometry(doc) && !binaryFiles.length) {
+          pendingBinaryPackage = { doc, name };
+          setStatus(`Manifest laddat. Välj ${expectedBinaryGeometryNames(doc).join(', ')} för att fortsätta.`);
+          drop.classList.add('hidden');
+          return;
+        }
+        await attachBinaryGeometryFromFiles(doc, binaryFiles);
+        pendingBinaryPackage = null;
+        loadVRIFC(doc, name);
+        return;
+      }
+      if (binaryFiles.length) {
+        throw new Error('Flera manifest med binära sidecar-filer behöver öppnas ett paket i taget.');
+      }
+
+      setStatus(`Läser ${manifestFiles.length} VRIFC-filer...`);
+      const docs = [];
+      for (const file of manifestFiles) {
+        docs.push(await readVRIFCFile(file));
+      }
+      loadVRIFC(mergeVRIFCDocs(docs, `${manifestFiles.length} modeller`), `${manifestFiles.length} modeller`);
+    }
+
+    function isVRIFCManifestFile(file) {
+      return /\.(json|gz|vrifc)$/i.test(file.name) && !/\.bin$/i.test(file.name);
+    }
+
+    function isBinaryGeometryFile(file) {
+      return /\.bin$/i.test(file.name);
+    }
+
+    function needsBinaryGeometry(doc) {
+      const buffers = doc?.binaryGeometry?.buffers || [];
+      return buffers.some((buffer) => buffer.uri && buffer.byteLength);
+    }
+
+    function expectedBinaryGeometryNames(doc) {
+      return (doc?.binaryGeometry?.buffers || [])
+        .map((buffer) => String(buffer.uri || '').split(/[\\/]/).pop())
+        .filter(Boolean);
+    }
+
+    async function readVRIFCFile(file) {
+      setStatus(`Läser ${file.name}...`);
+      const doc = await readVRIFCBlob(file);
+      return { doc, name: file.name };
+    }
+
+    async function readVRIFCResponse(response) {
+      return readVRIFCBytes(await response.arrayBuffer());
+    }
+
+    async function readVRIFCBlob(blob) {
+      return readVRIFCBytes(await blob.arrayBuffer());
+    }
+
+    async function readVRIFCBytes(buffer) {
+      const bytes = new Uint8Array(buffer);
+      const isGzip = bytes[0] === 0x1f && bytes[1] === 0x8b;
+      if (!isGzip) {
+        return JSON.parse(new TextDecoder().decode(bytes));
+      }
+      if (typeof DecompressionStream === 'undefined') {
+        throw new Error('Den här browsern kan inte packa upp .gz-filer direkt.');
+      }
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+      const text = await new Response(stream).text();
+      return JSON.parse(text);
+    }
+
+    async function attachBinaryGeometryFromUrl(doc, sourceUrl) {
+      const buffers = doc?.binaryGeometry?.buffers || [];
+      if (!buffers.length) return;
+      const manifestUrl = new URL(sourceUrl, window.location.href);
+      const loaded = [];
+      for (const bufferDef of buffers) {
+        if (!bufferDef.uri) continue;
+        const binaryUrl = new URL(bufferDef.uri, manifestUrl);
+        setStatus(`Laddar binär geometri ${bufferDef.uri}...`);
+        const response = await fetch(binaryUrl.href, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`Kunde inte läsa binär geometri (${response.status})`);
+        const arrayBuffer = await response.arrayBuffer();
+        if (bufferDef.byteLength && arrayBuffer.byteLength !== bufferDef.byteLength) {
+          throw new Error(`Binär geometri har fel storlek (${arrayBuffer.byteLength} av ${bufferDef.byteLength} byte).`);
+        }
+        loaded.push(arrayBuffer);
+      }
+      doc._binaryGeometryBuffers = loaded;
+    }
+
+    async function attachBinaryGeometryFromFiles(doc, files) {
+      const buffers = doc?.binaryGeometry?.buffers || [];
+      if (!buffers.length) return;
+      const fileByName = new Map(files.map((file) => [file.name.toLowerCase(), file]));
+      const loaded = [];
+      for (const bufferDef of buffers) {
+        const expectedName = String(bufferDef.uri || '').split(/[\\/]/).pop();
+        const file = fileByName.get(expectedName.toLowerCase());
+        if (!file) {
+          throw new Error(`Saknar binär geometri: välj ${expectedName}. På Quest kan du först öppna manifestet och sedan öppna binärfilen separat.`);
+        }
+        setStatus(`Laddar binär geometri ${file.name}...`);
+        const arrayBuffer = await file.arrayBuffer();
+        if (bufferDef.byteLength && arrayBuffer.byteLength !== bufferDef.byteLength) {
+          throw new Error(`Binär geometri har fel storlek (${arrayBuffer.byteLength} av ${bufferDef.byteLength} byte).`);
+        }
+        loaded.push(arrayBuffer);
+      }
+      doc._binaryGeometryBuffers = loaded;
+    }
+
+    function mergeVRIFCDocs(items, projectName) {
+      const bounds = new THREE.Box3();
+      bounds.makeEmpty();
+
+      const materials = [];
+      const geometries = [];
+      const elements = [];
+      const visualOverlays = [];
+      const files = [];
+      let hasLargeThinMep = false;
+      let tableTargetMeters = 4.5;
+      let visualMinThickness = 0;
+      let medianElementMaxDim = 0;
+      let p90ElementMaxDim = 0;
+
+      items.forEach((item, index) => {
+        const doc = item.doc || item;
+        const modelName = item.name || doc.source?.name || doc.project?.name || `modell-${index + 1}`;
+        validateDoc(doc);
+        files.push(modelName);
+
+        const prefix = `m${index + 1}-${slugId(modelName)}`;
+        const materialMap = new Map();
+        const geometryMap = new Map();
+
+        for (const material of doc.materials || []) {
+          const sourceId = material.id || 'default';
+          const id = `${prefix}-mat-${sourceId}`;
+          materialMap.set(sourceId, id);
+          materials.push({ ...material, id });
+        }
+
+        if (!materialMap.has('default')) {
+          const id = `${prefix}-mat-default`;
+          materialMap.set('default', id);
+          materials.push({ id, color: '#b7c6d8', roughness: 0.78, metalness: 0.02, opacity: 1 });
+        }
+
+        for (const geometry of doc.geometries || []) {
+          const id = `${prefix}-geo-${geometry.id}`;
+          geometryMap.set(geometry.id, id);
+          geometries.push({ ...geometry, id });
+        }
+
+        for (const element of expandDocElements(doc)) {
+          const sourceGeometry = element.geometry || 'box';
+          const sourceMaterial = element.material || 'default';
+          elements.push({
+            ...element,
+            id: `${prefix}-el-${element.id}`,
+            geometry: geometryMap.get(sourceGeometry) || sourceGeometry,
+            material: materialMap.get(sourceMaterial) || materialMap.get('default') || sourceMaterial,
+            source: { ...(element.source || {}), model: modelName },
+            properties: { ...(element.properties || {}), Model: modelName }
+          });
+        }
+
+        for (const overlay of doc.visualOverlays || []) {
+          const overlayGeometryMap = new Map();
+          const overlayGeometries = [];
+          for (const geometry of overlay.geometries || []) {
+            const id = `${prefix}-overlay-${overlay.id || 'overlay'}-geo-${geometry.id}`;
+            overlayGeometryMap.set(geometry.id, id);
+            overlayGeometries.push({ ...geometry, id });
+          }
+          const overlayElements = (overlay.elements || []).map((element) => {
+            const sourceGeometry = element.geometry || 'box';
+            const sourceMaterial = element.material || 'default';
+            return {
+              ...element,
+              id: `${prefix}-overlay-${element.id}`,
+              geometry: overlayGeometryMap.get(sourceGeometry) || geometryMap.get(sourceGeometry) || sourceGeometry,
+              material: materialMap.get(sourceMaterial) || materialMap.get('default') || sourceMaterial,
+              source: { ...(element.source || {}), model: modelName },
+              properties: {
+                ...(element.properties || {}),
+                SourceElementId: element.properties?.SourceElementId ? `${prefix}-el-${element.properties.SourceElementId}` : element.properties?.SourceElementId,
+                Model: modelName
+              }
+            };
+          });
+          const overlayInstances = (overlay.instances || []).map((instance) => {
+            const copy = instance.slice();
+            copy[0] = `${prefix}-overlay-${copy[0]}`;
+            copy[3] = overlayGeometryMap.get(copy[3]) || geometryMap.get(copy[3]) || copy[3];
+            copy[4] = materialMap.get(copy[4]) || materialMap.get('default') || copy[4];
+            copy[8] = copy[8] ? `${prefix}-el-${copy[8]}` : copy[8];
+            return copy;
+          });
+          visualOverlays.push({
+            ...overlay,
+            id: `${prefix}-${overlay.id || 'overlay'}`,
+            sourceModel: modelName,
+            geometries: overlayGeometries,
+            elements: overlayElements,
+            instances: overlayInstances
+          });
+        }
+
+        if (doc.bounds?.min && doc.bounds?.max) {
+          bounds.expandByPoint(new THREE.Vector3(...doc.bounds.min));
+          bounds.expandByPoint(new THREE.Vector3(...doc.bounds.max));
+        }
+
+        const hints = doc.sceneHints || {};
+        hasLargeThinMep ||= Boolean(hints.largeThinMep || hints.overview === 'large-thin-mep');
+        tableTargetMeters = Math.max(tableTargetMeters, Number(hints.tableTargetMeters) || 0);
+        visualMinThickness = Math.max(visualMinThickness, Number(hints.visualMinThickness) || 0);
+        medianElementMaxDim = Math.max(medianElementMaxDim, Number(hints.medianElementMaxDim) || 0);
+        p90ElementMaxDim = Math.max(p90ElementMaxDim, Number(hints.p90ElementMaxDim) || 0);
+      });
+
+      const size = bounds.isEmpty() ? new THREE.Vector3() : bounds.getSize(new THREE.Vector3());
+      const center = bounds.isEmpty() ? new THREE.Vector3() : bounds.getCenter(new THREE.Vector3());
+
+      return {
+        format: 'vr-ifc',
+        version: VERSION,
+        generator: 'VR-IFC Reader Merge v0.0.1',
+        units: items[0]?.doc?.units || items[0]?.units || 'm',
+        axis: items[0]?.doc?.axis || items[0]?.axis || 'Y_UP',
+        project: { name: projectName },
+        source: {
+          name: projectName,
+          kind: 'VRIFC-MERGE',
+          files,
+          mergedAt: new Date().toISOString()
+        },
+        conversion: {
+          geometryMode: 'merged-runtime',
+          placementMode: 'shared-world-coordinates',
+          note: 'Merged from multiple pre-converted VRIFC runtime files in the reader.'
+        },
+        bounds: {
+          min: bounds.isEmpty() ? [0, 0, 0] : roundVector(bounds.min),
+          max: bounds.isEmpty() ? [0, 0, 0] : roundVector(bounds.max),
+          center: roundVector(center),
+          size: roundVector(size)
+        },
+        sceneHints: {
+          tableTargetMeters: hasLargeThinMep ? Math.max(tableTargetMeters, 32) : tableTargetMeters,
+          overview: hasLargeThinMep ? 'multi-model-large-thin' : 'multi-model',
+          medianElementMaxDim,
+          p90ElementMaxDim,
+          largeThinMep: hasLargeThinMep,
+          visualMinThickness
+        },
+        materials,
+        geometries,
+        elements,
+        visualOverlays
+      };
+    }
+
+    function slugId(value) {
+      return String(value || 'model')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 32) || 'model';
+    }
+
+    function roundVector(vector) {
+      return [vector.x, vector.y, vector.z].map((value) => Math.round((value || 0) * 100000) / 100000);
+    }
+
+    function loadVRIFC(doc, sourceName) {
+      validateDoc(doc);
+      clearModel();
+      currentDoc = doc;
+      currentDoc.elements = expandDocElements(currentDoc);
+      currentRenderDoc = selectRenderDoc(doc);
+
+      const materials = buildMaterials(doc.materials || [], isLargeThinMep(doc));
+      cacheMaterialDefs(doc.materials || []);
+      const runtimeMaterials = new Map();
+      const geometries = buildGeometries(currentRenderDoc.geometries || []);
+      const deferDetailMeshes = shouldDeferDetailedMeshes(currentRenderDoc);
+      const allGroups = groupElements(currentRenderDoc.elements || []);
+      const grouped = [];
+      deferredDetailMeshCount = 0;
+      deferredDetailDrawableCount = 0;
+      for (const group of allGroups) {
+        if (deferDetailMeshes && isDetailedMeshGroup(group)) {
+          deferredDetailMeshCount += group.items.length;
+          deferredDetailDrawableCount++;
+          continue;
+        }
+        grouped.push(group);
+      }
+      populateFilters(currentRenderDoc.elements || []);
+
+      for (const group of grouped) {
+        const geometry = geometries.get(group.geometry);
+        if (!geometry) continue;
+
+        const sourceMaterial = runtimeDisplayMaterial(group, materials, runtimeMaterials, currentDoc) || materials.get(group.material) || materials.get('default');
+        const material = sourceMaterial.clone();
+        material.userData.baseOpacity = material.opacity ?? 1;
+        material.userData.baseTransparent = material.transparent;
+        material.userData.baseDepthWrite = material.depthWrite;
+        const mesh = new THREE.InstancedMesh(geometry, material, group.items.length);
+        mesh.name = `vrifc:${group.geometry}:${group.material}`;
+        mesh.frustumCulled = false;
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        mesh.userData.vrifc = {
+          kind: 'instanced',
+          model: group.model,
+          type: group.type,
+          discipline: group.discipline,
+          systemClass: group.systemClass,
+          runtimeClass: group.runtimeClass,
+          geometrySource: group.geometrySource,
+          materialId: group.material,
+          finishClass: currentMaterialDefs.get(group.material)?.finishClass || 'generic',
+          materialRole: currentMaterialDefs.get(group.material)?.materialRole || 'generic',
+          instances: []
+        };
+
+        group.items.forEach((element, index) => {
+          const matrix = composeMatrix(element.transform);
+          mesh.setMatrixAt(index, matrix);
+          mesh.userData.vrifc.instances[index] = {
+            id: element.id,
+            type: element.type || '',
+            name: element.name || element.id,
+            properties: element.properties || {},
+            originalMatrix: matrix.clone()
+          };
+        });
+
+        root.add(mesh);
+        drawables.push(mesh);
+      }
+      const hasPerformanceBatches = buildPerformanceBatches(materials);
+
+      root.updateMatrixWorld(true);
+      recalcModelBox();
+      recalcDisplayBox();
+      autoEnablePerformanceMode(drawables.length, hasPerformanceBatches);
+      updateSpaceButton();
+      applyTableMode();
+      updateStageFrame();
+      frameModel();
+      drop.classList.add('hidden');
+      selected = null;
+      applyVisibilityFilters();
+      updateProps();
+      updateVisualButton();
+      updatePerformanceButton();
+      const visualInfo = currentRenderDoc.renderLabel ? ` Visning: ${currentRenderDoc.renderLabel}.` : '';
+      const performanceInfo = performanceMode ? ' Prestandaläge aktiverat för stor helmodell.' : '';
+      const deferredInfo = deferredDetailMeshCount ? ` Detaljmesh skjuts upp: ${deferredDetailMeshCount} element visas via ${performanceBatches.length} renderbatchar.` : '';
+      setStatus(`${doc.project?.name || sourceName} laddad: ${doc.elements.length} element, ${drawables.length} draw objects.${visualInfo}${performanceInfo}${deferredInfo}`);
+    }
+
+    function selectRenderDoc(doc) {
+      const overlay = getOverviewOverlay(doc);
+      const useOverlay = overlay && visualMode === 'debug-overview';
+      if (!useOverlay) {
+        const debugRaw = visualMode === 'debug-raw' || visualMode === 'debug-overview';
+        return {
+          ...doc,
+          renderMode: debugRaw ? 'debug-raw' : 'production',
+          renderLabel: debugRaw ? 'Debug rådata' : 'Produktionsläge'
+        };
+      }
+      const overlayElements = expandOverlayElements(overlay);
+      const overlaySourceIds = new Set(overlayElements.map((element) => element.properties?.SourceElementId).filter(Boolean));
+      return {
+        ...doc,
+        geometries: [...(doc.geometries || []), ...(overlay.geometries || [])],
+        elements: [
+          ...(doc.elements || []).filter((element) => !overlaySourceIds.has(element.id)),
+          ...overlayElements
+        ],
+        renderMode: 'debug-overview',
+        renderLabel: overlay.label ? `Debug ${overlay.label.toLowerCase()}` : 'Debug översikt',
+        renderOverlayId: overlay.id
+      };
+    }
+
+    function expandOverlayElements(overlay) {
+      if (overlay?.elements?.length) return overlay.elements;
+      return (overlay?.instances || []).map((item) => ({
+        id: item[0],
+        type: item[1],
+        name: item[2],
+        geometry: item[3],
+        material: item[4],
+        transform: { position: [item[5], item[6], item[7]] },
+        properties: {
+          SourceElementId: item[8],
+          SourceType: item[1],
+          Model: overlay.sourceModel || 'Overlay',
+          VisualRole: 'large-thin-overview',
+          GeometrySource: 'large-thin-mep-overview-box',
+          GeometryFallbackReason: 'large-thin-mep-visual-overlay'
+        }
+      }));
+    }
+
+    function getOverviewOverlay(doc) {
+      return (doc?.visualOverlays || []).find((overlay) => {
+        return overlay.kind === 'element-overlay'
+          && (overlay.id === 'large-thin-overview' || overlay.id?.includes('large-thin') || overlay.defaultVisible);
+      }) || null;
+    }
+
+    function validateDoc(doc) {
+      if (!doc || doc.format !== 'vr-ifc') {
+        throw new Error('Filen är inte ett VR-IFC-dokument.');
+      }
+      if (!Array.isArray(doc.geometries) || !Array.isArray(doc.elements)) {
+        if (Array.isArray(doc.geometries) && Array.isArray(doc.elementTable?.rows)) return;
+        throw new Error('VR-IFC saknar geometrier eller element.');
+      }
+    }
+
+    function buildMaterials(materialDefs, boostVisibility = false) {
+      const materials = new Map();
+      materials.set('default', createModelMaterial({
+        color: '#b7c6d8',
+        roughness: 0.78,
+        metalness: 0.02,
+        opacity: 1
+      }, boostVisibility));
+
+      for (const def of materialDefs) {
+        materials.set(def.id, createModelMaterial(def, boostVisibility));
+      }
+      return materials;
+    }
+
+    function cacheMaterialDefs(materialDefs) {
+      currentMaterialDefs.clear();
+      currentMaterialDefs.set('default', {
+        id: 'default',
+        color: '#b7c6d8',
+        finishClass: 'generic',
+        materialRole: 'generic'
+      });
+      for (const def of materialDefs) currentMaterialDefs.set(def.id, def);
+    }
+
+    function expandDocElements(doc) {
+      if (Array.isArray(doc?.elements) && doc.elements.length) return doc.elements;
+      return (doc?.elementTable?.rows || []).map((row) => {
+        const transform = row[5] === 'm'
+          ? { matrix: row[6] || [] }
+          : { position: (row[6] || []).slice(0, 3), rotation: (row[6] || []).slice(3, 6) };
+        return {
+          id: row[0],
+          type: row[1],
+          name: row[2],
+          geometry: row[3],
+          material: row[4],
+          transform,
+          source: {
+            expressId: row[7],
+            globalId: row[8],
+            placementId: row[9]
+          },
+          properties: {
+            ExpressId: String(row[7] || ''),
+            GlobalId: row[8] || '',
+            IfcType: row[1] || '',
+            ObjectType: row[10] || '-',
+            Placement: row[9] ? `#${row[9]}` : '-',
+          GeometrySource: row[11] || 'unknown',
+          GeometryFallbackReason: row[12] || 'unknown',
+          ExportColor: row[13] || '-',
+          ShapeRepresentation: row[14] || '-',
+          Solid: row[15] || '-',
+          Profile: row[16] || '-',
+          MappedItem: row[17] || '-',
+          RepresentationMap: row[18] || '-',
+          Model: row[19] || '',
+          GeometryRuntimeClass: row[20] || '',
+          Discipline: row[21] || disciplineForType(row[1])
+        }
+      };
+    });
+  }
+
+    function createModelMaterial(def, boostVisibility) {
+      const finish = finishMaterialDefinition(def, boostVisibility);
+      const color = finish.color;
+      const opacity = finish.opacity;
+      if (boostVisibility) {
+        const boosted = boostColor(color);
+        return new THREE.MeshBasicMaterial({
+          color: boosted,
+          transparent: opacity < 1,
+          opacity,
+          side: THREE.DoubleSide,
+          depthWrite: opacity >= 1
+        });
+      }
+
+      return new THREE.MeshStandardMaterial({
+        color,
+        roughness: finish.roughness,
+        metalness: finish.metalness,
+        transparent: opacity < 1,
+        opacity,
+        side: THREE.DoubleSide,
+        depthWrite: opacity >= 0.72
+      });
+    }
+
+    function finishMaterialDefinition(def, boostVisibility) {
+      const rawColor = new THREE.Color(def.color || '#b7c6d8');
+      const glassLike = isGlassLikeMaterial(def, rawColor);
+      const mepLike = def.finishClass === 'mep';
+      const opacity = boostVisibility
+        ? Math.max(def.opacity ?? 1, 0.88)
+        : (glassLike ? Math.min(def.opacity ?? 0.34, 0.34) : (def.opacity ?? 1));
+      return {
+        color: tuneProductionColor(rawColor, { glassLike, mepLike, opacity }),
+        opacity,
+        roughness: glassLike ? 0.16 : (mepLike ? THREE.MathUtils.clamp(def.roughness ?? 0.62, 0.52, 0.78) : THREE.MathUtils.clamp(def.roughness ?? 0.74, 0.48, 0.9)),
+        metalness: glassLike ? 0 : THREE.MathUtils.clamp(def.metalness ?? (def.finishClass === 'metal' ? 0.06 : 0.015), 0, 0.1)
+      };
+    }
+
+    function isGlassLikeMaterial(def, color) {
+      const id = String(def.id || '').toLowerCase();
+      if (def.finishClass === 'glass') return true;
+      if (id.includes('glass') || id.includes('glazed') || id.includes('window')) return true;
+      if ((def.opacity ?? 1) < 0.55) return true;
+      const hsl = {};
+      color.getHSL(hsl);
+      return hsl.l > 0.88 && (def.opacity ?? 1) < 0.8;
+    }
+
+    function tuneProductionColor(color, { glassLike = false, mepLike = false, opacity = 1 } = {}) {
+      const tuned = color.clone();
+      const hsl = {};
+      tuned.getHSL(hsl);
+      if (glassLike) {
+        tuned.setHSL(0.54, Math.max(hsl.s, 0.18), 0.62);
+        return tuned;
+      }
+      if (mepLike) {
+        tuned.setHSL(hsl.h, THREE.MathUtils.clamp(hsl.s * 0.68, 0.16, 0.44), THREE.MathUtils.clamp(hsl.l, 0.42, 0.68));
+        return tuned;
+      }
+      const saturation = THREE.MathUtils.clamp(hsl.s * 0.72, 0.08, 0.52);
+      let lightness = THREE.MathUtils.clamp(hsl.l, 0.32, 0.78);
+      if (opacity < 1) lightness = THREE.MathUtils.clamp(lightness * 0.9, 0.36, 0.68);
+      tuned.setHSL(hsl.h, saturation, lightness);
+      return tuned;
+    }
+
+    function boostColor(color) {
+      const boosted = color.clone();
+      const hsl = {};
+      boosted.getHSL(hsl);
+      boosted.setHSL(hsl.h, Math.max(hsl.s, 0.58), Math.max(hsl.l, 0.68));
+      boosted.lerp(new THREE.Color(0xffffff), 0.22);
+      return boosted;
+    }
+
+    function isLargeThinMep(doc) {
+      return doc?.sceneHints?.overview === 'large-thin-mep' || doc?.sceneHints?.largeThinMep;
+    }
+
+    function buildGeometries(geometryDefs) {
+      const geometries = new Map();
+      for (const def of geometryDefs) {
+        if (def.kind === 'box') {
+          const size = def.size || [1, 1, 1];
+          const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
+          geometry.computeBoundingBox();
+          geometries.set(def.id, geometry);
+        } else if (def.kind === 'mesh') {
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.Float32BufferAttribute(def.positions || [], 3));
+          geometry.setIndex(def.indices || []);
+          geometry.computeVertexNormals();
+          geometry.computeBoundingBox();
+          geometries.set(def.id, geometry);
+        } else if (def.kind === 'linear-mep') {
+          const geometry = buildLinearMepGeometry(def);
+          geometry.computeBoundingBox();
+          geometries.set(def.id, geometry);
+        } else if (def.kind === 'mep-node') {
+          const geometry = buildMepNodeGeometry(def);
+          geometry.computeBoundingBox();
+          geometries.set(def.id, geometry);
+        } else if (def.kind === 'mep-box') {
+          const size = def.size || [1, 1, 1];
+          const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
+          const center = def.center || [0, 0, 0];
+          geometry.translate(center[0] || 0, center[1] || 0, center[2] || 0);
+          geometry.computeBoundingBox();
+          geometries.set(def.id, geometry);
+        }
+      }
+      return geometries;
+    }
+
+    function buildLinearMepGeometry(def) {
+      const length = Math.max(Number(def.length) || 1, 1e-6);
+      const radius = Math.max(Number(def.radius) || length * 0.02, 1e-6);
+      if (def.profile === 'rect' && Array.isArray(def.size) && def.size.length >= 3) {
+        const size = def.size.map((value) => Math.max(Number(value) || 1e-6, 1e-6));
+        const overlap = Math.min(Math.max(...size) * 0.2, length * 0.08);
+        size[def.axis || 0] = length + overlap * 2;
+        const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
+        const center = def.center || [0, 0, 0];
+        geometry.translate(center[0] || 0, center[1] || 0, center[2] || 0);
+        geometry.computeVertexNormals();
+        return geometry;
+      }
+      const segments = radius < 0.09 ? 18 : 28;
+      const overlap = Math.min(radius * 1.45, length * 0.08);
+      const geometry = new THREE.CylinderGeometry(radius, radius, length + overlap * 2, segments, 1, false);
+      if (def.axis === 0) geometry.rotateZ(Math.PI / 2);
+      else if (def.axis === 2) geometry.rotateX(Math.PI / 2);
+      const center = def.center || [0, 0, 0];
+      geometry.translate(center[0] || 0, center[1] || 0, center[2] || 0);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function buildMepNodeGeometry(def) {
+      const size = (def.size || [1, 1, 1]).map((value) => Math.max(Number(value) || 1, 1e-6));
+      if (def.profile === 'terminal' || def.profile === 'controller') {
+        const geometry = new THREE.BoxGeometry(size[0], size[1], size[2]);
+        const center = def.center || [0, 0, 0];
+        geometry.translate(center[0] || 0, center[1] || 0, center[2] || 0);
+        geometry.computeVertexNormals();
+        return geometry;
+      }
+      if (def.shape === 'inline') {
+        if (def.profile === 'fitting') {
+          return buildInlineFittingGeometry(def, size);
+        }
+        const axis = Number.isInteger(def.axis) ? def.axis : largestAxis(size);
+        const length = size[axis];
+        const cross = size.filter((_, index) => index !== axis);
+        const radius = Math.max((cross[0] + cross[1]) * 0.25, Math.min(...cross) * 0.5, 1e-6);
+        const overlap = Math.min(radius * 1.25, length * 0.08);
+        const geometry = new THREE.CylinderGeometry(radius, radius, length + overlap * 2, radius < 0.09 ? 18 : 24, 1, false);
+        if (axis === 0) geometry.rotateZ(Math.PI / 2);
+        else if (axis === 2) geometry.rotateX(Math.PI / 2);
+        const center = def.center || [0, 0, 0];
+        geometry.translate(center[0] || 0, center[1] || 0, center[2] || 0);
+        geometry.computeVertexNormals();
+        return geometry;
+      }
+      if (def.shape === 'compact') {
+        const visualSize = size.map((value) => value * 0.86);
+        const geometry = new THREE.BoxGeometry(visualSize[0], visualSize[1], visualSize[2]);
+        const center = def.center || [0, 0, 0];
+        geometry.translate(center[0] || 0, center[1] || 0, center[2] || 0);
+        geometry.computeVertexNormals();
+        return geometry;
+      }
+      const geometry = new THREE.SphereGeometry(0.5, 18, 12);
+      geometry.scale(size[0], size[1], size[2]);
+      const center = def.center || [0, 0, 0];
+      geometry.translate(center[0] || 0, center[1] || 0, center[2] || 0);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function buildInlineFittingGeometry(def, size) {
+      const axis = Number.isInteger(def.axis) ? def.axis : largestAxis(size);
+      const visualSize = size.slice();
+      const crossAxes = [0, 1, 2].filter((item) => item !== axis);
+      const crossMin = Math.min(...crossAxes.map((item) => visualSize[item]));
+      const crossMax = Math.max(...crossAxes.map((item) => visualSize[item]));
+      visualSize[axis] *= 1.08;
+      for (const crossAxis of crossAxes) {
+        visualSize[crossAxis] = Math.max(visualSize[crossAxis] * 0.88, crossMin * 0.78, crossMax * 0.42);
+      }
+      const geometry = new THREE.BoxGeometry(visualSize[0], visualSize[1], visualSize[2]);
+      const center = def.center || [0, 0, 0];
+      geometry.translate(center[0] || 0, center[1] || 0, center[2] || 0);
+      geometry.computeVertexNormals();
+      return geometry;
+    }
+
+    function largestAxis(values) {
+      let axis = 0;
+      for (let i = 1; i < values.length; i++) {
+        if ((values[i] || 0) > (values[axis] || 0)) axis = i;
+      }
+      return axis;
+    }
+
+    function groupElements(elements) {
+      const map = new Map();
+      for (const element of elements) {
+        const model = elementModel(element);
+        const type = element.type || element.properties?.IfcType || '-';
+        const discipline = elementDiscipline(element);
+        const systemClass = elementSystemClass(element);
+        const runtimeClass = elementRuntimeClass(element);
+        const geometrySource = element.properties?.GeometrySource || '';
+        const key = `${element.geometry || 'box'}|${element.material || 'default'}|${model}|${type}|${discipline}|${systemClass}|${runtimeClass}|${geometrySource}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            geometry: element.geometry || 'box',
+            material: element.material || 'default',
+            model,
+            type,
+            discipline,
+            systemClass,
+            runtimeClass,
+            geometrySource,
+            items: []
+          });
+        }
+        map.get(key).items.push(element);
+      }
+      return [...map.values()];
+    }
+
+    function shouldDeferDetailedMeshes(doc) {
+      if (!doc || visualMode !== 'production') return false;
+      const renderBatches = doc.renderBatches || [];
+      if (!renderBatches.length) return false;
+      const elementCount = doc.elements?.length || 0;
+      if (elementCount < PERFORMANCE_DRAWABLE_THRESHOLD) return false;
+      const hasInlineBatch = renderBatches.some((batch) => Array.isArray(batch.positions) && Array.isArray(batch.indices));
+      const hasBinaryBatch = renderBatches.some((batch) => batch.bufferViews?.positions && batch.bufferViews?.indices);
+      const binaryReady = !hasBinaryBatch || Boolean(doc._binaryGeometryBuffers?.length);
+      return binaryReady && (hasInlineBatch || hasBinaryBatch);
+    }
+
+    function isDetailedMeshGroup(group) {
+      if (group.runtimeClass === 'surface-mesh') return true;
+      if (group.runtimeClass) return false;
+      return String(group.geometrySource || '').includes('-mesh');
+    }
+
+    function elementModel(element) {
+      return element.properties?.Model || element.source?.model || element.sourceModel || 'Modell';
+    }
+
+    function elementDiscipline(element) {
+      return element.properties?.Discipline || disciplineForType(element.type || element.properties?.IfcType);
+    }
+
+    function elementRuntimeClass(element) {
+      const runtimeClass = element.properties?.GeometryRuntimeClass || '';
+      if (runtimeClass) return runtimeClass;
+      const source = element.properties?.GeometrySource || '';
+      if (source.includes('surface-model')) return 'surface-mesh';
+      return '';
+    }
+
+    function elementSystemClass(element) {
+      const material = String(element.material || '').replace(/^m\d+-.+-mat-/, '');
+      if (systemLabel(material) !== material) return material;
+      const type = String(element.type || element.properties?.IfcType || '').toUpperCase();
+      if (type.includes('PIPE')) return 'mep-pipe';
+      if (type.includes('DUCT') || type === 'IFCFLOWSEGMENT' || type === 'IFCFLOWFITTING') return 'mep-duct';
+      if (type.includes('CABLE')) return 'mep-cable-tray';
+      if (type.includes('TERMINAL') || type === 'IFCAIRTERMINAL') return 'mep-terminal';
+      if (type.includes('ELECTRIC') || type.includes('CONTROLLER') || type.includes('METER') || type.includes('TREATMENT')) return 'mep-equipment';
+      return '';
+    }
+
+    function disciplineForType(type) {
+      const value = String(type || '').toUpperCase();
+      if (value === 'IFCSPACE') return 'space';
+      if (value.includes('FLOW') || value.includes('DUCT') || value.includes('PIPE') || value.includes('CABLE')) return 'mep';
+      if (['IFCWALL', 'IFCWALLSTANDARDCASE', 'IFCSLAB', 'IFCROOF', 'IFCDOOR', 'IFCWINDOW', 'IFCCOLUMN', 'IFCMEMBER', 'IFCPLATE', 'IFCRAILING', 'IFCSTAIR', 'IFCCURTAINWALL'].includes(value)) return 'building';
+      if (value === 'IFCBUILDINGELEMENTPROXY') return 'proxy';
+      return 'other';
+    }
+
+    function runtimeDisplayMaterial(group, materials, runtimeMaterials, doc) {
+      if (!['linear-mep', 'mep-node', 'box-mep', 'surface-mesh'].includes(group.runtimeClass)) return null;
+      const key = `${group.runtimeClass}|${group.type}|${group.material}`;
+      if (runtimeMaterials.has(key)) return runtimeMaterials.get(key);
+
+      const color = runtimeDisplayColor(group);
+      const surfaceMeshLike = group.runtimeClass === 'surface-mesh';
+      const materialDef = currentMaterialDefs.get(group.material) || {};
+      const glassLike = surfaceMeshLike && materialDef.finishClass === 'glass';
+      const metalLike = surfaceMeshLike && materialDef.finishClass === 'metal';
+      const spaceLike = surfaceMeshLike && (materialDef.finishClass === 'space' || String(group.type || '').toUpperCase() === 'IFCSPACE');
+      const material = new THREE.MeshStandardMaterial({
+        color,
+        emissive: color.clone().multiplyScalar(surfaceMeshLike ? 0.012 : runtimeEmissiveStrength(group.runtimeClass)),
+        roughness: glassLike ? 0.18 : (metalLike ? 0.48 : (surfaceMeshLike ? surfaceMeshRoughness(group, materialDef) : 0.76)),
+        metalness: metalLike ? 0.1 : 0.01,
+        side: THREE.DoubleSide,
+        transparent: glassLike || spaceLike,
+        opacity: glassLike ? 0.48 : (spaceLike ? 0.18 : 1),
+        depthWrite: !(glassLike || spaceLike)
+      });
+      runtimeMaterials.set(key, material);
+      return material;
+    }
+
+    function runtimeDisplayColor(group) {
+      if (group.runtimeClass === 'surface-mesh') return surfaceMeshDisplayColor(group);
+      const baseByRuntime = {
+        'linear-mep': ['#6fb8bb', '#bda562', '#bd8566', '#8cad7b'],
+        'mep-node': ['#a68cb5', '#bd858f', '#9390ba'],
+        'box-mep': ['#b4bfca', '#aab6bf', '#bfb4c9']
+      };
+      const palette = baseByRuntime[group.runtimeClass] || ['#b7c6d8'];
+      const color = new THREE.Color(palette[hashString(`${group.type}|${group.material}`) % palette.length]);
+      const hsl = {};
+      color.getHSL(hsl);
+      const variance = ((hashString(`${group.material}|${group.type}`) % 7) - 3) / 100;
+      const surfaceMeshLike = group.runtimeClass === 'surface-mesh';
+      color.setHSL(
+        hsl.h,
+        surfaceMeshLike ? Math.min(0.24, Math.max(0.08, hsl.s + variance * 0.5)) : Math.min(0.58, Math.max(0.28, hsl.s + variance)),
+        surfaceMeshLike ? Math.min(0.72, Math.max(0.42, hsl.l + variance)) : Math.min(0.74, Math.max(0.48, hsl.l + variance))
+      );
+      return color;
+    }
+
+    function surfaceMeshDisplayColor(group) {
+      const materialDef = currentMaterialDefs.get(group.material) || {};
+      const typeTint = surfaceTypeColor(group.type);
+      const legacyTypeTint = legacyIfcTypeColor(group.type) || typeTint;
+      let color = materialFinishColor(materialDef) || typeTint.clone();
+      if (materialDef.finishClass === 'authored' && materialDef.color) {
+        color = new THREE.Color(materialDef.color).lerp(legacyTypeTint, 0.58);
+      } else if (materialDef.finishClass === 'generic') {
+        color = legacyTypeTint.clone().lerp(typeTint, 0.12);
+      } else if (materialDef.finishClass === 'mineral') {
+        color = color.lerp(legacyTypeTint, 0.62);
+      } else if (materialDef.finishClass === 'metal') {
+        color = color.lerp(legacyTypeTint, 0.52);
+      }
+      const hsl = {};
+      color.getHSL(hsl);
+      const variance = ((hashString(`${group.material}|${group.type}`) % 7) - 3) / 120;
+      const authoredBoost = materialDef.finishClass === 'authored' ? 0.12 : 0;
+      color.setHSL(
+        hsl.h,
+        THREE.MathUtils.clamp(hsl.s + authoredBoost + variance * 0.3, 0.14, 0.72),
+        THREE.MathUtils.clamp(hsl.l + variance + 0.075, 0.38, 0.86)
+      );
+      return color;
+    }
+
+    function surfaceTypeColor(type) {
+      const value = String(type || '').toUpperCase();
+      if (value.includes('SLAB') || value.includes('ROOF') || value.includes('STAIR')) return new THREE.Color('#b9b6ad');
+      if (value.includes('COLUMN') || value.includes('MEMBER')) return new THREE.Color('#768596');
+      if (value.includes('PLATE') || value.includes('CURTAIN')) return new THREE.Color('#95a8ad');
+      if (value.includes('WALL')) return new THREE.Color('#c0b9ae');
+      if (value.includes('DOOR')) return new THREE.Color('#b98a62');
+      if (value.includes('SPACE')) return new THREE.Color('#8f7bc2');
+      if (value.includes('RAILING')) return new THREE.Color('#7f8ea0');
+      if (value.includes('PROXY')) return new THREE.Color('#8f99a5');
+      return new THREE.Color('#a4adb6');
+    }
+
+    function legacyIfcTypeColor(type) {
+      const value = String(type || '').toUpperCase();
+      const colors = {
+        IFCWALL: '#94a3b8',
+        IFCWALLSTANDARDCASE: '#94a3b8',
+        IFCSLAB: '#64748b',
+        IFCROOF: '#475569',
+        IFCDOOR: '#f59e0b',
+        IFCWINDOW: '#38bdf8',
+        IFCCOLUMN: '#a78bfa',
+        IFCBEAM: '#c084fc',
+        IFCMEMBER: '#c084fc',
+        IFCPLATE: '#a8a29e',
+        IFCCURTAINWALL: '#60a5fa',
+        IFCRAILING: '#a1a1aa',
+        IFCSTAIR: '#fb923c',
+        IFCSTAIRFLIGHT: '#f97316',
+        IFCSPACE: '#63b3ed',
+        IFCBUILDINGELEMENTPROXY: '#6b7280'
+      };
+      return colors[value] ? new THREE.Color(colors[value]) : null;
+    }
+
+    function materialFinishColor(def = {}) {
+      if (def.finishClass === 'glass') return new THREE.Color('#6fd5e8');
+      if (def.finishClass === 'metal') return new THREE.Color('#75869a');
+      if (def.finishClass === 'wood') return new THREE.Color('#b9855f');
+      if (def.finishClass === 'space') return new THREE.Color('#8f7bc2');
+      if (def.finishClass === 'mineral') return new THREE.Color('#bbb8ae');
+      if (def.finishClass === 'mep') return new THREE.Color('#74aaa1');
+      return null;
+    }
+
+    function surfaceMeshRoughness(group, materialDef = {}) {
+      const type = String(group.type || '').toUpperCase();
+      if (materialDef.finishClass === 'metal' || type.includes('COLUMN') || type.includes('MEMBER')) return 0.52;
+      if (type.includes('PLATE') || type.includes('CURTAIN')) return 0.58;
+      if (type.includes('SLAB') || type.includes('WALL') || type.includes('ROOF')) return 0.74;
+      return 0.68;
+    }
+
+    function runtimeEmissiveStrength(runtimeClass) {
+      return ({
+        'linear-mep': 0.06,
+        'mep-node': 0.05,
+        'box-mep': 0.03,
+        'surface-mesh': 0.035
+      })[runtimeClass] ?? 0.03;
+    }
+
+    function hashString(value) {
+      let hash = 2166136261;
+      for (let i = 0; i < value.length; i++) {
+        hash ^= value.charCodeAt(i);
+        hash = Math.imul(hash, 16777619);
+      }
+      return Math.abs(hash);
+    }
+
+    function populateFilters(elements) {
+      const prevModel = modelFilter.value || 'all';
+      const prevType = typeFilter.value || 'all';
+      const prevDiscipline = disciplineFilter.value || 'all';
+      const prevSystem = systemFilter.value || 'all';
+      const prevRuntime = runtimeFilter.value || 'all';
+      const models = uniqueSorted(elements.map(elementModel));
+      const types = uniqueSorted(elements.map((element) => element.type || element.properties?.IfcType || '-'));
+      const disciplines = uniqueSorted(elements.map(elementDiscipline));
+      const systems = uniqueSorted(elements.map(elementSystemClass).filter(Boolean));
+      const runtimeClasses = uniqueSorted(elements.map(elementRuntimeClass).filter(Boolean));
+      replaceOptions(modelFilter, 'Alla modeller', models, prevModel);
+      replaceOptions(typeFilter, 'Alla typer', types, prevType);
+      replaceOptions(disciplineFilter, 'Alla discipliner', disciplines, prevDiscipline);
+      replaceOptions(systemFilter, 'Alla system', systems, prevSystem, systemLabel);
+      replaceOptions(runtimeFilter, 'Alla lager', runtimeClasses, prevRuntime, runtimeLabel);
+      updateSystemLegend(systems, elements);
+      updatePresetButtons();
+    }
+
+    function uniqueSorted(values) {
+      return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'sv'));
+    }
+
+    function replaceOptions(select, allLabel, values, preferred, labelFor = (value) => value) {
+      select.innerHTML = '';
+      select.append(new Option(allLabel, 'all'));
+      for (const value of values) select.append(new Option(labelFor(value), value));
+      select.value = values.includes(preferred) ? preferred : 'all';
+      select.disabled = values.length <= 1;
+    }
+
+    function runtimeLabel(value) {
+      return ({
+        'linear-mep': 'Stråk',
+        'mep-node': 'Noder',
+        'box-mep': 'Boxar',
+        'surface-mesh': 'Mesh',
+        mesh: 'Mesh'
+      })[value] || value;
+    }
+
+    function systemLabel(value) {
+      return ({
+        'mep-pipe': 'Rör',
+        'mep-duct': 'Ventilation',
+        'mep-cable-tray': 'Kabelstegar',
+        'mep-terminal': 'Don/terminaler',
+        'mep-equipment': 'Utrustning'
+      })[value] || value;
+    }
+
+    function systemColor(value) {
+      return ({
+        'mep-pipe': '#2f7fc6',
+        'mep-duct': '#4f9d5f',
+        'mep-cable-tray': '#8b929b',
+        'mep-terminal': '#5bb8a8',
+        'mep-equipment': '#c9923d'
+      })[value] || '#b7c6d8';
+    }
+
+    function countSystems(elements) {
+      return elements.reduce((counts, element) => {
+        const system = elementSystemClass(element);
+        if (system) counts[system] = (counts[system] || 0) + 1;
+        return counts;
+      }, {});
+    }
+
+    function updateSystemLegend(systems, elements = []) {
+      const counts = countSystems(elements);
+      systemLegend.innerHTML = '';
+      if (!systems.length) {
+        systemLegend.classList.add('hidden');
+        return;
+      }
+      systemLegend.classList.remove('hidden');
+      for (const system of systems) {
+        const legendButton = document.createElement('button');
+        legendButton.type = 'button';
+        legendButton.className = 'legend-button';
+        legendButton.title = `Visa ${systemLabel(system).toLowerCase()}`;
+        const swatch = document.createElement('span');
+        swatch.className = 'legend-swatch';
+        swatch.style.background = systemColor(system);
+        const label = document.createElement('span');
+        label.textContent = `${systemLabel(system)} ${counts[system] || 0}`;
+        legendButton.append(swatch, label);
+        legendButton.addEventListener('click', () => {
+          systemFilter.value = systemFilter.value === system ? 'all' : system;
+          applyVisibilityFilters();
+        });
+        systemLegend.append(legendButton);
+      }
+      updateSystemLegendState();
+    }
+
+    function updateSystemLegendState() {
+      const active = systemFilter.value || 'all';
+      for (const button of systemLegend.querySelectorAll('.legend-button')) {
+        const label = (button.textContent || '').replace(/\s+\d+$/, '');
+        const system = Array.from(systemFilter.options).find((option) => systemLabel(option.value) === label)?.value || '';
+        button.classList.toggle('active', active === system);
+      }
+    }
+
+    function applyVisibilityFilters() {
+      const modelValue = modelFilter.value || 'all';
+      const typeValue = typeFilter.value || 'all';
+      const disciplineValue = disciplineFilter.value || 'all';
+      const systemValue = systemFilter.value || 'all';
+      const runtimeValue = runtimeFilter.value || 'all';
+      let visible = 0;
+      let contextVisible = 0;
+      let performanceProxied = 0;
+      const performanceOverview = showSpaces && isPerformanceOverviewMode(modelValue, typeValue, disciplineValue, systemValue, runtimeValue);
+      const showContext = shouldShowNodeContext(typeValue, runtimeValue);
+      const contextSystem = systemValue === 'all' ? systemClassForTypeFilter(typeValue) : systemValue;
+      for (const mesh of drawables) {
+        const data = mesh.userData.vrifc || {};
+        const showSpace = showSpaces || !isSpaceDrawable(data);
+        const showModel = modelValue === 'all' || data.model === modelValue;
+        const showType = typeValue === 'all' || data.type === typeValue;
+        const showDiscipline = disciplineValue === 'all' || data.discipline === disciplineValue;
+        const showSystem = systemValue === 'all' || data.systemClass === systemValue;
+        const showRuntime = runtimeValue === 'all' || data.runtimeClass === runtimeValue;
+        const performanceProxiedMesh = isPerformanceProxiedMesh(data, performanceOverview);
+        const primaryVisible = showSpace && showModel && showType && showDiscipline && showSystem && showRuntime && !performanceProxiedMesh;
+        const context = showSpace && !primaryVisible && showContext && isLinearContextMesh(data, contextSystem) && showModel && showDiscipline;
+        mesh.visible = primaryVisible || context;
+        applyMeshContextState(mesh, context);
+        if (primaryVisible) visible++;
+        if (context) contextVisible++;
+        if (showSpace && performanceProxiedMesh && showModel && showType && showDiscipline && showSystem && showRuntime) performanceProxied++;
+      }
+      for (const batch of performanceBatches) {
+        batch.visible = performanceOverview;
+        if (batch.visible) visible++;
+      }
+      if (performanceOverview && deferredDetailDrawableCount) {
+        performanceProxied += deferredDetailMeshCount;
+      }
+      selected = null;
+      selectionFrame.visible = false;
+      recalcFilteredDisplayBox();
+      applyTableMode();
+      updateStageFrame();
+      frameModel();
+      updateProps();
+      if (currentDoc) {
+        const bits = [];
+        if (modelValue !== 'all') bits.push(modelValue);
+        if (typeValue !== 'all') bits.push(typeValue);
+        if (disciplineValue !== 'all') bits.push(disciplineValue);
+        if (systemValue !== 'all') bits.push(systemLabel(systemValue));
+        if (runtimeValue !== 'all') bits.push(runtimeLabel(runtimeValue));
+        const contextInfo = contextVisible ? ` Kontext: ${contextVisible} stråk visas svagt.` : '';
+        const performanceInfo = performanceProxied ? ` Prestandaläge: ${performanceProxied} detaljmesh batchade till ${performanceBatches.length} renderobjekt.` : '';
+        setStatus(bits.length ? `Filter aktivt: ${bits.join(' · ')} (${visible} draw objects visas).${contextInfo}${performanceInfo}` : `Alla filter rensade (${visible} draw objects visas).${performanceInfo}`);
+      }
+      updateSystemLegendState();
+      updatePresetButtons();
+      updatePerformanceButton();
+      updateSpaceButton();
+    }
+
+    function recalcFilteredDisplayBox() {
+      filteredDisplayBox.makeEmpty();
+      if (!currentDoc || !hasActiveFilters()) return;
+
+      const visibleObjects = drawables.filter((mesh) => mesh.visible);
+      const geometryBox = boxFromVisibleDrawables(visibleObjects);
+      const profile = filteredBoxProfile(visibleObjects);
+      const robustBox = robustBoxFromVisibleGeometryCenters(visibleObjects, profile.low, profile.high, profile.pad);
+      const useRobustBox = robustBox && !robustBox.isEmpty() && profile.preferRobust
+        || (robustBox && !robustBox.isEmpty() && shouldPreferRobustGeometryBox(geometryBox, robustBox));
+      const visibleBox = useRobustBox ? robustBox : geometryBox;
+      if (!visibleBox.isEmpty()) filteredDisplayBox.copy(visibleBox);
+
+      if (!filteredDisplayBox.isEmpty()) {
+        const size = filteredDisplayBox.getSize(new THREE.Vector3());
+        filteredDisplayBox.expandByScalar(Math.max(size.x, size.y, size.z, 1) * 0.08);
+      }
+    }
+
+    function robustBoxFromVisibleDrawableCenters(objects) {
+      const points = [];
+      const matrix = new THREE.Matrix4();
+      const point = new THREE.Vector3();
+      for (const object of objects) {
+        const data = object.userData.vrifc || {};
+        for (const instance of data.instances || []) {
+          if (!instance.originalMatrix) continue;
+          matrix.copy(instance.originalMatrix);
+          point.setFromMatrixPosition(matrix);
+          if (Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z)) {
+            points.push([point.x, point.y, point.z]);
+          }
+        }
+      }
+      if (points.length < 100) return null;
+      const box = new THREE.Box3(
+        new THREE.Vector3(
+          percentile(points.map((item) => item[0]), 0.02),
+          percentile(points.map((item) => item[1]), 0.02),
+          percentile(points.map((item) => item[2]), 0.02)
+        ),
+        new THREE.Vector3(
+          percentile(points.map((item) => item[0]), 0.98),
+          percentile(points.map((item) => item[1]), 0.98),
+          percentile(points.map((item) => item[2]), 0.98)
+        )
+      );
+      const size = box.getSize(new THREE.Vector3());
+      box.expandByScalar(Math.max(size.x, size.y, size.z, 1) * 0.16);
+      return box;
+    }
+
+    function hasActiveFilters() {
+      return [modelFilter, typeFilter, disciplineFilter, systemFilter, runtimeFilter]
+        .some((select) => (select.value || 'all') !== 'all') || !showSpaces;
+    }
+
+    function isSpaceDrawable(data) {
+      return String(data?.type || '').toUpperCase() === 'IFCSPACE'
+        || data?.discipline === 'space'
+        || data?.finishClass === 'space'
+        || data?.materialRole === 'space';
+    }
+
+    function filteredBoxProfile(objects) {
+      const counts = objects.reduce((acc, object) => {
+        const runtimeClass = object.userData.vrifc?.runtimeClass || '';
+        acc.total++;
+        if (['linear-mep', 'mep-node', 'box-mep'].includes(runtimeClass)) acc.mepRuntime++;
+        if (runtimeClass === 'surface-mesh' || !runtimeClass) acc.mesh++;
+        return acc;
+      }, { total: 0, mepRuntime: 0, mesh: 0 });
+      const mepHeavy = counts.total > 0 && counts.mepRuntime / counts.total > 0.65 && counts.mesh / counts.total < 0.35;
+      const meshHeavy = counts.total > 200 && counts.mesh / counts.total > 0.65;
+      if (meshHeavy) return { low: 0.06, high: 0.94, pad: 0.22, preferRobust: true };
+      if (mepHeavy) return { low: 0.02, high: 0.98, pad: 0.18, preferRobust: true };
+      return { low: 0.02, high: 0.98, pad: 0.18, preferRobust: false };
+    }
+
+    function shouldPreferRobustGeometryBox(geometryBox, robustBox) {
+      if (!geometryBox || geometryBox.isEmpty() || !robustBox || robustBox.isEmpty()) return false;
+      const fullSize = geometryBox.getSize(new THREE.Vector3());
+      const robustSize = robustBox.getSize(new THREE.Vector3());
+      const fullAxis = Math.max(fullSize.x, fullSize.y, fullSize.z, 1);
+      const robustAxis = Math.max(robustSize.x, robustSize.y, robustSize.z, 1);
+      return fullAxis > robustAxis * 1.75;
+    }
+
+    function robustBoxFromVisibleGeometryCenters(objects, low = 0.02, high = 0.98, padRatio = 0.18) {
+      const centers = [];
+      const matrix = new THREE.Matrix4();
+      const instanceBox = new THREE.Box3();
+      const center = new THREE.Vector3();
+      for (const object of objects) {
+        const geometryBox = object.geometry?.boundingBox || null;
+        if (!geometryBox || geometryBox.isEmpty()) continue;
+        const data = object.userData.vrifc || {};
+        for (const instance of data.instances || []) {
+          if (!instance.originalMatrix) continue;
+          matrix.copy(instance.originalMatrix);
+          instanceBox.copy(geometryBox).applyMatrix4(matrix);
+          if (instanceBox.isEmpty()) continue;
+          instanceBox.getCenter(center);
+          if (Number.isFinite(center.x) && Number.isFinite(center.y) && Number.isFinite(center.z)) {
+            centers.push([center.x, center.y, center.z]);
+          }
+        }
+      }
+      if (centers.length < 100) return null;
+      const box = new THREE.Box3(
+        new THREE.Vector3(
+          percentile(centers.map((item) => item[0]), low),
+          percentile(centers.map((item) => item[1]), low),
+          percentile(centers.map((item) => item[2]), low)
+        ),
+        new THREE.Vector3(
+          percentile(centers.map((item) => item[0]), high),
+          percentile(centers.map((item) => item[1]), high),
+          percentile(centers.map((item) => item[2]), high)
+        )
+      );
+      const size = box.getSize(new THREE.Vector3());
+      box.expandByScalar(Math.max(size.x, size.y, size.z, 1) * padRatio);
+      return box;
+    }
+
+    function boxFromVisibleDrawables(objects) {
+      const box = new THREE.Box3();
+      const matrix = new THREE.Matrix4();
+      const instanceBox = new THREE.Box3();
+      const point = new THREE.Vector3();
+      for (const object of objects) {
+        const geometryBox = object.geometry?.boundingBox || null;
+        const data = object.userData.vrifc || {};
+        for (const instance of data.instances || []) {
+          if (!instance.originalMatrix) continue;
+          matrix.copy(instance.originalMatrix);
+          if (geometryBox && !geometryBox.isEmpty()) {
+            instanceBox.copy(geometryBox).applyMatrix4(matrix);
+            if (!instanceBox.isEmpty()) box.union(instanceBox);
+          } else {
+            point.setFromMatrixPosition(matrix);
+            if (Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z)) box.expandByPoint(point);
+          }
+        }
+      }
+      return box;
+    }
+
+    function isPerformanceOverviewMode(modelValue, typeValue, disciplineValue, systemValue, runtimeValue) {
+      return performanceMode
+        && modelValue === 'all'
+        && typeValue === 'all'
+        && disciplineValue === 'all'
+        && systemValue === 'all'
+        && runtimeValue === 'all'
+        && performanceBatches.length > 0;
+    }
+
+    function isPerformanceProxiedMesh(data, performanceOverview) {
+      return performanceOverview && isDetailedMeshDrawable(data);
+    }
+
+    function isDetailedMeshDrawable(data) {
+      if (data.runtimeClass === 'surface-mesh') return true;
+      if (data.runtimeClass) return false;
+      return String(data.geometrySource || '').includes('-mesh');
+    }
+
+    function buildPerformanceBatches(materials) {
+      performanceBatches.length = 0;
+      if (buildDocRenderBatches(currentRenderDoc.renderBatches || [], materials)) return true;
+
+      const sourceMeshes = drawables.filter((mesh) => isDetailedMeshDrawable(mesh.userData.vrifc || {}));
+      if (sourceMeshes.length < PERFORMANCE_DRAWABLE_THRESHOLD * 0.35) return false;
+
+      const builders = [];
+      const activeBuilderByMaterial = new Map();
+      const maxVerticesPerBatch = 140000;
+      for (const mesh of sourceMeshes) {
+        const geometry = mesh.geometry;
+        const position = geometry?.getAttribute?.('position');
+        if (!position?.count) continue;
+        const materialKey = performanceMaterialSignature(mesh.material);
+        let builder = activeBuilderByMaterial.get(materialKey);
+        if (!builder || builder.vertexCount + position.count * Math.max(mesh.count || 1, 1) > maxVerticesPerBatch) {
+          builder = createPerformanceBatchBuilder(mesh.material);
+          builders.push(builder);
+          activeBuilderByMaterial.set(materialKey, builder);
+        }
+        appendMeshInstancesToBatch(builder, mesh);
+      }
+
+      for (const builder of builders) {
+        const batch = createPerformanceBatch(builder);
+        if (!batch) continue;
+        root.add(batch);
+        performanceBatches.push(batch);
+      }
+      return performanceBatches.length > 0;
+    }
+
+    function buildDocRenderBatches(renderBatches, materials) {
+      let count = 0;
+      for (const batchDef of renderBatches) {
+        if (batchDef.kind !== 'mesh-batch') continue;
+        const positionAttribute = attributeFromRenderBatch(batchDef, 'positions');
+        const indexAttribute = attributeFromRenderBatch(batchDef, 'indices');
+        if (!positionAttribute || !indexAttribute) continue;
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', positionAttribute);
+        geometry.setIndex(indexAttribute);
+        geometry.computeVertexNormals();
+        geometry.computeBoundingBox();
+        const sourceMaterial = materials.get(batchDef.material) || materials.get('default');
+        const material = sourceMaterial.clone();
+        material.userData.baseOpacity = material.opacity ?? 1;
+        material.userData.baseTransparent = material.transparent;
+        material.userData.baseDepthWrite = material.depthWrite;
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.name = `vrifc:${batchDef.id || 'render-batch'}`;
+        mesh.frustumCulled = false;
+        mesh.visible = false;
+        mesh.userData.vrifc = {
+          kind: 'performance-batch',
+          source: batchDef.source || {}
+        };
+        root.add(mesh);
+        performanceBatches.push(mesh);
+        count++;
+      }
+      return count > 0;
+    }
+
+    function attributeFromRenderBatch(batchDef, key) {
+      if (Array.isArray(batchDef[key])) {
+        return key === 'indices'
+          ? new THREE.BufferAttribute(new Uint32Array(batchDef[key]), 1)
+          : new THREE.Float32BufferAttribute(batchDef[key], 3);
+      }
+      const view = batchDef.bufferViews?.[key];
+      if (!view) return null;
+      return attributeFromBufferView(view);
+    }
+
+    function attributeFromBufferView(view) {
+      const buffer = currentRenderDoc?._binaryGeometryBuffers?.[view.buffer || 0];
+      if (!buffer) return null;
+      const itemSize = view.itemSize || (view.componentType === 'FLOAT32' ? 3 : 1);
+      if (view.componentType === 'FLOAT32') {
+        return new THREE.BufferAttribute(new Float32Array(buffer, view.byteOffset || 0, (view.count || 0) * itemSize), itemSize);
+      }
+      if (view.componentType === 'UINT32') {
+        return new THREE.BufferAttribute(new Uint32Array(buffer, view.byteOffset || 0, view.count || 0), itemSize);
+      }
+      return null;
+    }
+
+    function createPerformanceBatchBuilder(material) {
+      return {
+        positions: [],
+        normals: [],
+        indices: [],
+        vertexCount: 0,
+        material: material.clone()
+      };
+    }
+
+    function appendMeshInstancesToBatch(builder, mesh) {
+      const matrix = new THREE.Matrix4();
+      const normalMatrix = new THREE.Matrix3();
+      const count = Math.max(mesh.count || 1, 1);
+      for (let index = 0; index < count; index++) {
+        mesh.getMatrixAt(index, matrix);
+        normalMatrix.getNormalMatrix(matrix);
+        appendTransformedGeometry(builder, mesh.geometry, matrix, normalMatrix);
+      }
+    }
+
+    function appendTransformedGeometry(builder, geometry, matrix, normalMatrix) {
+      const position = geometry.getAttribute('position');
+      if (!position?.count) return;
+      const normal = geometry.getAttribute('normal');
+      const baseIndex = builder.vertexCount;
+      const point = new THREE.Vector3();
+      const normalPoint = new THREE.Vector3();
+
+      for (let i = 0; i < position.count; i++) {
+        point.fromBufferAttribute(position, i).applyMatrix4(matrix);
+        builder.positions.push(point.x, point.y, point.z);
+        if (normal?.count) {
+          normalPoint.fromBufferAttribute(normal, i).applyMatrix3(normalMatrix).normalize();
+          builder.normals.push(normalPoint.x, normalPoint.y, normalPoint.z);
+        }
+      }
+
+      const sourceIndex = geometry.index;
+      if (sourceIndex?.count) {
+        for (let i = 0; i < sourceIndex.count; i++) {
+          builder.indices.push(baseIndex + sourceIndex.getX(i));
+        }
+      } else {
+        for (let i = 0; i < position.count; i++) {
+          builder.indices.push(baseIndex + i);
+        }
+      }
+      builder.vertexCount += position.count;
+    }
+
+    function createPerformanceBatch(builder) {
+      if (!builder.vertexCount || !builder.indices.length) return null;
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(builder.positions, 3));
+      if (builder.normals.length === builder.positions.length) {
+        geometry.setAttribute('normal', new THREE.Float32BufferAttribute(builder.normals, 3));
+      } else {
+        geometry.computeVertexNormals();
+      }
+      geometry.setIndex(builder.indices);
+      geometry.computeBoundingBox();
+      const material = builder.material;
+      material.userData.baseOpacity = material.opacity ?? 1;
+      material.userData.baseTransparent = material.transparent;
+      material.userData.baseDepthWrite = material.depthWrite;
+      const batch = new THREE.Mesh(geometry, material);
+      batch.name = 'vrifc:performance-batch';
+      batch.frustumCulled = false;
+      batch.visible = false;
+      batch.userData.vrifc = { kind: 'performance-batch' };
+      return batch;
+    }
+
+    function performanceMaterialSignature(material) {
+      const color = material?.color?.getHexString?.() || 'ffffff';
+      const emissive = material?.emissive?.getHexString?.() || '000000';
+      const opacity = Math.round((material?.opacity ?? 1) * 1000);
+      const metalness = Math.round((material?.metalness ?? 0) * 1000);
+      const roughness = Math.round((material?.roughness ?? 1) * 1000);
+      return `${material?.type || 'material'}:${color}:${emissive}:${opacity}:${metalness}:${roughness}:${material?.side ?? THREE.FrontSide}`;
+    }
+
+    function shouldShowNodeContext(typeValue, runtimeValue) {
+      if (runtimeValue === 'mep-node') return true;
+      if (runtimeValue !== 'all') return false;
+      return isMepNodeType(typeValue);
+    }
+
+    function isMepNodeType(typeValue) {
+      const type = String(typeValue || '').toUpperCase();
+      return type.includes('FITTING') || type.includes('TERMINAL') || type.includes('CONTROLLER') || type.includes('METER') || type.includes('TREATMENT') || type.includes('DISTRIBUTIONBOARD') || type.includes('APPLIANCE');
+    }
+
+    function systemClassForTypeFilter(typeValue) {
+      const type = String(typeValue || '').toUpperCase();
+      if (type.includes('PIPE')) return 'mep-pipe';
+      if (type.includes('DUCT') || type === 'IFCFLOWFITTING' || type === 'IFCFLOWTERMINAL') return 'mep-duct';
+      if (type.includes('CABLECARRIER')) return 'mep-cable-tray';
+      return '';
+    }
+
+    function isLinearContextMesh(data, contextSystem) {
+      if (data.runtimeClass !== 'linear-mep') return false;
+      return !contextSystem || data.systemClass === contextSystem;
+    }
+
+    function applyMeshContextState(mesh, contextVisible) {
+      const material = mesh.material;
+      if (!material) return;
+      const baseOpacity = material.userData?.baseOpacity ?? 1;
+      if (contextVisible) {
+        material.opacity = Math.min(baseOpacity, 0.24);
+        material.transparent = true;
+        material.depthWrite = false;
+      } else {
+        material.opacity = baseOpacity;
+        material.transparent = material.userData?.baseTransparent ?? baseOpacity < 1;
+        material.depthWrite = material.userData?.baseDepthWrite ?? baseOpacity >= 1;
+      }
+      material.needsUpdate = true;
+    }
+
+    function applyViewPreset(preset) {
+      if (!currentDoc) {
+        setStatus('Ladda en modell först.');
+        return;
+      }
+      modelFilter.value = 'all';
+      typeFilter.value = 'all';
+      disciplineFilter.value = 'all';
+      systemFilter.value = 'all';
+      const runtimeByPreset = {
+        coordination: 'all',
+        runs: 'linear-mep',
+        nodes: 'mep-node',
+        mesh: 'surface-mesh'
+      };
+      const runtime = runtimeByPreset[preset] || 'all';
+      runtimeFilter.value = optionExists(runtimeFilter, runtime) ? runtime : 'all';
+      applyVisibilityFilters();
+      if (preset !== 'coordination' && runtimeFilter.value === 'all') {
+        setStatus(`${presetLabel(preset)} saknas i den laddade modellen.`);
+      }
+    }
+
+    function optionExists(select, value) {
+      return Array.from(select.options).some((option) => option.value === value);
+    }
+
+    function presetLabel(preset) {
+      return ({
+        coordination: 'Samordning',
+        runs: 'Stråk',
+        nodes: 'Noder',
+        mesh: 'Mesh'
+      })[preset] || preset;
+    }
+
+    function updatePresetButtons() {
+      const runtimeValue = runtimeFilter.value || 'all';
+      presetButtons.coordination.classList.toggle('active', runtimeValue === 'all');
+      presetButtons.runs.classList.toggle('active', runtimeValue === 'linear-mep');
+      presetButtons.nodes.classList.toggle('active', runtimeValue === 'mep-node');
+      presetButtons.mesh.classList.toggle('active', runtimeValue === 'surface-mesh');
+      const hasDoc = Boolean(currentDoc);
+      presetButtons.coordination.disabled = !hasDoc;
+      presetButtons.runs.disabled = !hasDoc || !optionExists(runtimeFilter, 'linear-mep');
+      presetButtons.nodes.disabled = !hasDoc || !optionExists(runtimeFilter, 'mep-node');
+      presetButtons.mesh.disabled = !hasDoc || !optionExists(runtimeFilter, 'surface-mesh');
+    }
+
+    function autoEnablePerformanceMode(drawableCount, hasPerformanceBatches = false) {
+      performanceMode = Boolean(hasPerformanceBatches && deferredDetailMeshCount) || drawableCount > PERFORMANCE_DRAWABLE_THRESHOLD;
+      updatePerformancePixelRatio();
+      updatePerformanceButton();
+    }
+
+    function togglePerformanceMode() {
+      if (!currentDoc) {
+        setStatus('Ladda en modell först.');
+        updatePerformanceButton();
+        return;
+      }
+      performanceMode = !performanceMode;
+      updatePerformancePixelRatio();
+      applyVisibilityFilters();
+      setStatus(performanceMode ? 'Prestandaläge aktivt för helvy.' : 'Prestandaläge avstängt.');
+    }
+
+    function updatePerformanceButton() {
+      performanceButton.disabled = !currentDoc;
+      performanceButton.classList.toggle('active', performanceMode);
+      performanceButton.textContent = performanceMode ? 'Prestanda på' : 'Prestanda';
+    }
+
+    function toggleSpaces() {
+      if (!currentDoc) {
+        setStatus('Ladda en modell först.');
+        updateSpaceButton();
+        return;
+      }
+      showSpaces = !showSpaces;
+      applyVisibilityFilters();
+      setStatus(showSpaces ? 'IFCSPACE visas.' : 'IFCSPACE dolda.');
+    }
+
+    function updateSpaceButton() {
+      spaceButton.disabled = !currentDoc;
+      spaceButton.classList.toggle('active', showSpaces);
+      spaceButton.textContent = showSpaces ? 'Rum på' : 'Rum av';
+    }
+
+    function updatePerformancePixelRatio() {
+      const maxPixelRatio = isQuestLikeBrowser ? (performanceMode ? 0.9 : 1) : (performanceMode ? 1.15 : 1.75);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, maxPixelRatio));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function composeMatrix(transform = {}) {
+      if (Array.isArray(transform.matrix) && transform.matrix.length === 16) {
+        return new THREE.Matrix4().set(
+          transform.matrix[0], transform.matrix[1], transform.matrix[2], transform.matrix[3],
+          transform.matrix[4], transform.matrix[5], transform.matrix[6], transform.matrix[7],
+          transform.matrix[8], transform.matrix[9], transform.matrix[10], transform.matrix[11],
+          transform.matrix[12], transform.matrix[13], transform.matrix[14], transform.matrix[15]
+        );
+      }
+      const position = new THREE.Vector3(...(transform.position || [0, 0, 0]));
+      const rotation = transform.rotation || [0, 0, 0];
+      const quaternion = new THREE.Quaternion().setFromEuler(new THREE.Euler(
+        THREE.MathUtils.degToRad(rotation[0] || 0),
+        THREE.MathUtils.degToRad(rotation[1] || 0),
+        THREE.MathUtils.degToRad(rotation[2] || 0),
+        'XYZ'
+      ));
+      const scale = new THREE.Vector3(...(transform.scale || [1, 1, 1]));
+      return new THREE.Matrix4().compose(position, quaternion, scale);
+    }
+
+    function clearModel() {
+      for (const object of [...root.children]) {
+        root.remove(object);
+        object.geometry?.dispose?.();
+        if (Array.isArray(object.material)) {
+          object.material.forEach((mat) => mat.dispose?.());
+        } else {
+          object.material?.dispose?.();
+        }
+      }
+      drawables.length = 0;
+      performanceBatches.length = 0;
+      deferredDetailMeshCount = 0;
+      deferredDetailDrawableCount = 0;
+      currentMaterialDefs.clear();
+      hiddenKeys.clear();
+      selected = null;
+      selectionFrame.visible = false;
+      tablePlate.visible = false;
+      modelFrame.visible = false;
+      filteredDisplayBox.makeEmpty();
+      updateSpaceButton();
+    }
+
+    function recalcModelBox() {
+      modelBox.makeEmpty();
+      if (currentDoc?.bounds?.min && currentDoc?.bounds?.max) {
+        modelBox.min.fromArray(currentDoc.bounds.min);
+        modelBox.max.fromArray(currentDoc.bounds.max);
+        return;
+      }
+      root.updateMatrixWorld(true);
+      for (const object of drawables) {
+        modelBox.expandByObject(object);
+      }
+    }
+
+    function recalcDisplayBox() {
+      displayBox.makeEmpty();
+      const elements = currentRenderDoc?.elements || currentDoc?.elements || [];
+      const rawLikeMode = currentRenderDoc?.renderMode === 'production' || currentRenderDoc?.renderMode === 'debug-raw';
+      if (elements.length < 2000 || rawLikeMode) {
+        if (rawLikeMode && isLargeThinMep(currentDoc) && fitDisplayBoxToElementCenters(elements, 0.05, 0.95, 0.08)) {
+          return;
+        }
+        const robust = robustQualityBox();
+        displayBox.copy(robust && !robust.isEmpty() ? robust : modelBox);
+        return;
+      }
+
+      if (fitDisplayBoxToElementCenters(elements, 0.01, 0.99, 0.06)) return;
+      displayBox.copy(modelBox);
+    }
+
+    function fitDisplayBoxToElementCenters(elements, low, high, padRatio) {
+      const points = [];
+      const matrix = new THREE.Matrix4();
+      const point = new THREE.Vector3();
+      for (const element of elements) {
+        matrix.copy(composeMatrix(element.transform));
+        point.setFromMatrixPosition(matrix);
+        if (Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z)) {
+          points.push([point.x, point.y, point.z]);
+        }
+      }
+
+      if (points.length < 100) {
+        return false;
+      }
+
+      const min = new THREE.Vector3(
+        percentile(points.map((item) => item[0]), low),
+        percentile(points.map((item) => item[1]), low),
+        percentile(points.map((item) => item[2]), low)
+      );
+      const max = new THREE.Vector3(
+        percentile(points.map((item) => item[0]), high),
+        percentile(points.map((item) => item[1]), high),
+        percentile(points.map((item) => item[2]), high)
+      );
+      displayBox.set(min, max);
+
+      const size = displayBox.getSize(new THREE.Vector3());
+      const pad = Math.max(size.x, size.y, size.z, 1) * padRatio;
+      displayBox.expandByScalar(pad);
+      if (displayBox.isEmpty()) displayBox.copy(modelBox);
+      return true;
+    }
+
+    function robustQualityBox() {
+      const robust = currentDoc?.qualityReport?.bounds?.robust;
+      if (!robust?.min || !robust?.max) return null;
+      const box = new THREE.Box3(
+        new THREE.Vector3(...robust.min),
+        new THREE.Vector3(...robust.max)
+      );
+      const size = box.getSize(new THREE.Vector3());
+      const pad = Math.max(size.x, size.y, size.z, 1) * 0.08;
+      box.expandByScalar(pad);
+      return box;
+    }
+
+    function activeViewBox() {
+      if (!filteredDisplayBox.isEmpty()) return filteredDisplayBox;
+      return displayBox.isEmpty() ? modelBox : displayBox;
+    }
+
+    function percentile(values, ratio) {
+      const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+      if (!sorted.length) return 0;
+      const index = THREE.MathUtils.clamp(Math.floor((sorted.length - 1) * ratio), 0, sorted.length - 1);
+      return sorted[index];
+    }
+
+    function applyTableMode() {
+      root.position.set(0, 0, 0);
+      root.scale.setScalar(1);
+      root.rotation.set(0, 0, 0);
+
+      const viewBox = activeViewBox();
+      updateEnvironmentForMode(viewBox);
+      if (viewBox.isEmpty()) return;
+
+      if (!tableMode) {
+        const center = viewAnchorPoint() || viewBox.getCenter(new THREE.Vector3());
+        const yOffset = 1.65 - center.y;
+        root.position.set(-center.x, yOffset, -center.z - 2.2);
+        root.updateMatrixWorld(true);
+        return;
+      }
+
+      const size = viewBox.getSize(new THREE.Vector3());
+      const center = viewBox.getCenter(new THREE.Vector3());
+      const maxAxis = Math.max(size.x, size.y, size.z, 1);
+      const targetMeters = currentDoc?.sceneHints?.tableTargetMeters || 4.5;
+      const scale = Math.min(1, targetMeters / maxAxis);
+      root.scale.setScalar(scale);
+      root.position.set(-center.x * scale, -viewBox.min.y * scale, -center.z * scale - 2.2);
+      root.updateMatrixWorld(true);
+    }
+
+    function viewAnchorPoint() {
+      const elements = currentRenderDoc?.elements || currentDoc?.elements || [];
+      if (elements.length < 100) return null;
+      const xs = [];
+      const ys = [];
+      const zs = [];
+      const matrix = new THREE.Matrix4();
+      const point = new THREE.Vector3();
+      for (const element of elements) {
+        matrix.copy(composeMatrix(element.transform));
+        point.setFromMatrixPosition(matrix);
+        if (Number.isFinite(point.x) && Number.isFinite(point.y) && Number.isFinite(point.z)) {
+          xs.push(point.x);
+          ys.push(point.y);
+          zs.push(point.z);
+        }
+      }
+      if (xs.length < 100) return null;
+      return new THREE.Vector3(
+        percentile(xs, 0.5),
+        percentile(ys, 0.5),
+        percentile(zs, 0.5)
+      );
+    }
+
+    function updateEnvironmentForMode(viewBox) {
+      const floorOpacity = tableMode ? 0.78 : 0.2;
+      const gridOpacity = tableMode ? 0.34 : 0.09;
+      floor.material.opacity = floorOpacity;
+      grid.material.opacity = gridOpacity;
+
+      if (!tableMode && viewBox && !viewBox.isEmpty()) {
+        const size = viewBox.getSize(new THREE.Vector3());
+        const floorSize = THREE.MathUtils.clamp(Math.max(size.x, size.z) * 1.1, 80, 900);
+        resizeFloor(floorSize);
+      } else {
+        resizeFloor(80);
+      }
+    }
+
+    function resizeFloor(size) {
+      if (Math.abs(activeFloorSize - size) < 0.001) return;
+      floor.geometry.dispose();
+      floor.geometry = new THREE.PlaneGeometry(size, size);
+      activeFloorSize = size;
+    }
+
+    function updateStageFrame() {
+      const viewBox = activeViewBox();
+      if (!currentDoc || viewBox.isEmpty()) {
+        tablePlate.visible = false;
+        modelFrame.visible = false;
+        return;
+      }
+
+      root.updateMatrixWorld(true);
+      stageBox.copy(viewBox).applyMatrix4(root.matrixWorld);
+      const size = stageBox.getSize(new THREE.Vector3());
+      const center = stageBox.getCenter(new THREE.Vector3());
+      const plateWidth = THREE.MathUtils.clamp(size.x * 1.1, 2.4, 36);
+      const plateDepth = THREE.MathUtils.clamp(size.z * 1.1, 2.4, 36);
+
+      tablePlate.position.set(center.x, Math.max(stageBox.min.y - 0.018, 0.002), center.z);
+      tablePlate.scale.set(plateWidth, plateDepth, 1);
+      tablePlate.visible = tableMode;
+
+      modelFrame.visible = tableMode;
+      modelFrame.updateMatrixWorld(true);
+    }
+
+    function frameModel() {
+      const viewBox = activeViewBox();
+      if (viewBox.isEmpty()) {
+        camera.position.set(8, 7, 10);
+        orbitTarget.set(0, 0, 0);
+        camera.lookAt(orbitTarget);
+        return;
+      }
+
+      root.updateMatrixWorld(true);
+      const worldBox = viewBox.clone().applyMatrix4(root.matrixWorld);
+      const center = worldBox.getCenter(new THREE.Vector3());
+      const size = worldBox.getSize(new THREE.Vector3());
+      const radius = Math.max(size.x, size.y, size.z, 1);
+
+      if (!tableMode) {
+        const lookY = isLargeThinMep(currentDoc) ? 1.65 : Math.min(Math.max(size.y * 0.35, 1.45), 2.2);
+        const lookAhead = new THREE.Vector3(0, lookY, -6);
+        orbitTarget.copy(lookAhead);
+        camera.position.set(0, 1.65, 4.2);
+        camera.near = 0.01;
+        camera.far = Math.max(radius * 4, 2000);
+        camera.updateProjectionMatrix();
+        camera.lookAt(orbitTarget);
+        return;
+      }
+
+      orbitTarget.copy(center);
+      camera.position.set(center.x + radius * 1.2, center.y + radius * 0.8, center.z + radius * 1.35);
+      camera.near = Math.max(radius * 0.0005, 0.01);
+      camera.far = Math.max(radius * 80, 2000);
+      camera.updateProjectionMatrix();
+      camera.lookAt(center);
+    }
+
+    function toggleMode() {
+      tableMode = !tableMode;
+      modeButton.textContent = tableMode ? 'Bordsläge' : '1:1';
+      modeButton.classList.toggle('active', !tableMode);
+      applyTableMode();
+      updateStageFrame();
+      frameModel();
+      updateProps();
+      setStatus(tableMode ? 'Bordsläge aktivt.' : '1:1-läge aktivt.');
+    }
+
+    function toggleVisualMode() {
+      if (!currentDoc) {
+        setStatus('Ladda en modell först.');
+        updateVisualButton();
+        return;
+      }
+      const hasOverlay = Boolean(getOverviewOverlay(currentDoc));
+      if (visualMode === 'production') {
+        visualMode = 'debug-raw';
+      } else if (visualMode === 'debug-raw' && hasOverlay) {
+        visualMode = 'debug-overview';
+      } else {
+        visualMode = 'production';
+      }
+      const doc = currentDoc;
+      loadVRIFC(doc, doc.source?.name || doc.project?.name || 'modell');
+    }
+
+    function updateVisualButton() {
+      const hasOverlay = Boolean(getOverviewOverlay(currentDoc));
+      const mode = currentRenderDoc?.renderMode || 'production';
+      visualButton.disabled = !currentDoc;
+      visualButton.classList.toggle('active', mode.startsWith('debug'));
+      visualButton.textContent = currentRenderDoc?.renderLabel || 'Produktionsläge';
+      visualButton.title = hasOverlay
+        ? 'Växla mellan produktionsläge, rå debugdata och översikts-debug'
+        : 'Växla mellan produktionsläge och rå debugdata';
+    }
+
+    function onPointerDown(event) {
+      isDragging = true;
+      lastX = event.clientX;
+      lastY = event.clientY;
+    }
+
+    function onPointerMove(event) {
+      if (!isDragging || renderer.xr.isPresenting) return;
+      const dx = event.clientX - lastX;
+      const dy = event.clientY - lastY;
+      lastX = event.clientX;
+      lastY = event.clientY;
+
+      if (event.buttons === 2 || event.shiftKey) {
+        panCamera(dx, dy);
+      } else {
+        orbitCamera(dx, dy);
+      }
+    }
+
+    function onCanvasClick(event) {
+      if (isDragging && (Math.abs(event.clientX - lastX) > 3 || Math.abs(event.clientY - lastY) > 3)) return;
+      const rect = canvas.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      selectFromHits(raycaster.intersectObjects(drawables, false));
+    }
+
+    function onWheel(event) {
+      event.preventDefault();
+      const direction = new THREE.Vector3().subVectors(camera.position, orbitTarget);
+      const factor = event.deltaY > 0 ? 1.12 : 0.88;
+      direction.multiplyScalar(factor);
+      camera.position.copy(orbitTarget).add(direction);
+      camera.lookAt(orbitTarget);
+    }
+
+    function orbitCamera(dx, dy) {
+      const offset = new THREE.Vector3().subVectors(camera.position, orbitTarget);
+      const spherical = new THREE.Spherical().setFromVector3(offset);
+      spherical.theta -= dx * 0.006;
+      spherical.phi = THREE.MathUtils.clamp(spherical.phi - dy * 0.006, 0.08, Math.PI - 0.08);
+      offset.setFromSpherical(spherical);
+      camera.position.copy(orbitTarget).add(offset);
+      camera.lookAt(orbitTarget);
+    }
+
+    function panCamera(dx, dy) {
+      const distance = camera.position.distanceTo(orbitTarget);
+      const speed = distance * 0.0015;
+      const right = new THREE.Vector3();
+      camera.getWorldDirection(right);
+      right.cross(camera.up).normalize();
+      const up = camera.up.clone().normalize();
+      const move = right.multiplyScalar(-dx * speed).add(up.multiplyScalar(dy * speed));
+      camera.position.add(move);
+      orbitTarget.add(move);
+    }
+
+    function updateControllerRays() {
+      if (!renderer.xr.isPresenting) return;
+      for (const item of controllerRays) {
+        item.line.visible = true;
+      }
+    }
+
+    function selectFromController(controller) {
+      tempMatrix.identity().extractRotation(controller.matrixWorld);
+      raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+      raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+      selectFromHits(raycaster.intersectObjects(drawables, false));
+    }
+
+    const tempMatrix = new THREE.Matrix4();
+
+    function selectFromHits(hits) {
+      const hit = hits.find((item) => item.object?.userData?.vrifc);
+      if (!hit) {
+        selected = null;
+        selectionFrame.visible = false;
+        updateProps();
+        return;
+      }
+
+      selected = {
+        mesh: hit.object,
+        instanceId: hit.instanceId,
+        data: hit.object.userData.vrifc.instances[hit.instanceId]
+      };
+      updateSelectionFrame();
+      updateProps();
+      setStatus(`Valt: ${selected.data.name || selected.data.id}`);
+    }
+
+    function updateSelectionFrame() {
+      if (!selected?.mesh || selected.instanceId == null) {
+        selectionFrame.visible = false;
+        return;
+      }
+
+      const geometryBox = selected.mesh.geometry?.boundingBox;
+      if (!geometryBox) {
+        selectionFrame.visible = false;
+        return;
+      }
+
+      const matrix = new THREE.Matrix4();
+      selected.mesh.getMatrixAt(selected.instanceId, matrix);
+      selected.mesh.updateMatrixWorld(true);
+      selectionBox.copy(geometryBox).applyMatrix4(matrix).applyMatrix4(selected.mesh.matrixWorld);
+      selectionFrame.visible = !selectionBox.isEmpty();
+      selectionFrame.updateMatrixWorld(true);
+    }
+
+    function hideSelected() {
+      if (!selected) return;
+      const key = `${selected.mesh.uuid}:${selected.instanceId}`;
+      hiddenKeys.add(key);
+      selected.mesh.setMatrixAt(selected.instanceId, new THREE.Matrix4().makeScale(0, 0, 0));
+      selected.mesh.instanceMatrix.needsUpdate = true;
+      selected = null;
+      selectionFrame.visible = false;
+      updateProps();
+      setStatus('Objekt dolt.');
+    }
+
+    function resetHidden() {
+      for (const mesh of drawables) {
+        const instances = mesh.userData.vrifc?.instances || [];
+        instances.forEach((data, index) => {
+          mesh.setMatrixAt(index, data.originalMatrix);
+        });
+        mesh.instanceMatrix.needsUpdate = true;
+      }
+      hiddenKeys.clear();
+      applyVisibilityFilters();
+      setStatus('Alla objekt visas.');
+    }
+
+    function updateProps() {
+      const title = propsPanel.querySelector('h2');
+      props.innerHTML = '';
+      updateFinishOverview();
+      updateProjectOverview();
+
+      if (!currentDoc) {
+        title.textContent = 'Ingen modell laddad';
+        addProp('Format', `VR-IFC v${VERSION}`);
+        addProp('Mål', 'Quest 3 WebXR');
+        return;
+      }
+
+      if (!selected) {
+        title.textContent = currentDoc.project?.name || 'Modell';
+        addProp('Element', String(currentDoc.elements?.length || 0));
+        addProp('Draw objects', String(drawables.length));
+        if (currentDoc.binaryGeometry?.buffers?.length) {
+          addProp('Binär geometri', currentDoc.binaryGeometry.schema || 'Aktiv');
+          addProp('Binär payload', formatBytes(currentDoc.binaryGeometry.buffers.reduce((sum, buffer) => sum + (buffer.byteLength || 0), 0)));
+        }
+        if (performanceMode) addProp('Prestandaläge', 'Aktivt');
+        if (deferredDetailMeshCount) addProp('Quest detaljmesh', `${deferredDetailMeshCount} element via ${performanceBatches.length} batchar`);
+        if (currentRenderDoc?.renderMode) addProp('Visning', currentRenderDoc.renderLabel || currentRenderDoc.renderMode);
+        if (currentDoc.qualityReport?.summary?.linearMepRuntimeCount) addProp('Linear MEP', String(currentDoc.qualityReport.summary.linearMepRuntimeCount));
+        if (currentDoc.qualityReport?.summary?.mepNodeRuntimeCount) addProp('MEP noder', String(currentDoc.qualityReport.summary.mepNodeRuntimeCount));
+        if (currentDoc.qualityReport?.summary?.boxMepRuntimeCount) addProp('Box MEP', String(currentDoc.qualityReport.summary.boxMepRuntimeCount));
+        if (currentDoc.qualityReport?.summary?.visualOverlayElements) addProp('Overlay-element', String(currentDoc.qualityReport.summary.visualOverlayElements));
+        addProp('IFCSPACE', showSpaces ? 'Visas' : 'Dolda');
+        if (currentDoc.visualOverlays?.[0]?.schema) addProp('Overlay-schema', currentDoc.visualOverlays[0].schema);
+        if (currentDoc.source?.files?.length) addProp('Filer', String(currentDoc.source.files.length));
+        if (currentDoc.qualityReport?.models?.length) addProp('Modellrapporter', String(currentDoc.qualityReport.models.length));
+        if (!modelFilter.disabled) addProp('Modellfilter', modelFilter.value === 'all' ? 'Alla' : modelFilter.value);
+        const modelReport = activeModelReport();
+        if (modelReport) {
+          addProp('Modellelement', String(modelReport.elements));
+          addProp('Modell runtime', formatCounts(modelReport.runtimeClasses));
+        }
+        if (!typeFilter.disabled) addProp('Typfilter', typeFilter.value === 'all' ? 'Alla' : typeFilter.value);
+        if (!disciplineFilter.disabled) addProp('Disciplinfilter', disciplineFilter.value === 'all' ? 'Alla' : disciplineFilter.value);
+        if (!systemFilter.disabled) addProp('Systemfilter', systemFilter.value === 'all' ? 'Alla' : systemLabel(systemFilter.value));
+        if (!runtimeFilter.disabled) addProp('Lagerfilter', runtimeFilter.value === 'all' ? 'Alla' : runtimeLabel(runtimeFilter.value));
+        if (currentDoc.qualityReport?.disciplines) addProp('Discipliner', formatCounts(currentDoc.qualityReport.disciplines));
+        addProp('Läge', tableMode ? 'Bordsläge' : '1:1');
+        addProp('Schema', currentDoc.version || '0.0.1');
+        if (currentDoc.bounds?.size) addProp('Bounds', `${currentDoc.bounds.size.join(' x ')} m`);
+        if (currentDoc.sceneHints?.medianElementMaxDim != null) addProp('Medianstorlek', `${currentDoc.sceneHints.medianElementMaxDim} m`);
+        if (currentDoc.sceneHints?.overview) addProp('Hint', currentDoc.sceneHints.overview);
+        if (currentDoc.sceneHints?.rawVisualMinThickness) addProp('Rå min-tjocklek', `${currentDoc.sceneHints.rawVisualMinThickness} m`);
+        if (currentDoc.sceneHints?.visualMinThickness) addProp('Visuell min-tjocklek', `${currentDoc.sceneHints.visualMinThickness} m`);
+        return;
+      }
+
+      title.textContent = selected.data.name || selected.data.id;
+      addProp('Id', selected.data.id);
+      addProp('Typ', selected.data.type || '-');
+      for (const [key, value] of Object.entries(selected.data.properties || {})) {
+        addProp(key, String(value));
+      }
+    }
+
+    function addProp(key, value) {
+      const k = document.createElement('div');
+      k.className = 'k';
+      k.textContent = key;
+      const v = document.createElement('div');
+      v.className = 'v';
+      v.textContent = value;
+      props.append(k, v);
+    }
+
+    function updateProjectOverview() {
+      projectOverview.innerHTML = '';
+      const reports = currentDoc?.qualityReport?.models || [];
+      if (!reports.length || selected) {
+        projectOverview.classList.add('hidden');
+        return;
+      }
+      projectOverview.classList.remove('hidden');
+      for (const report of reports) {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'project-overview-row';
+        row.title = `Filtrera ${report.name}`;
+        row.addEventListener('click', () => {
+          modelFilter.value = report.name;
+          applyVisibilityFilters();
+          setStatus(`Modellfilter aktivt: ${report.name}`);
+        });
+
+        const main = document.createElement('span');
+        main.className = 'project-overview-main';
+        const name = document.createElement('span');
+        name.className = 'project-overview-name';
+        name.textContent = report.name || report.sourceName || 'Modell';
+        const meta = document.createElement('span');
+        meta.className = 'project-overview-meta';
+        meta.textContent = modelReportSummary(report);
+        main.append(name, meta);
+
+        const score = document.createElement('span');
+        score.className = 'project-overview-score';
+        score.textContent = report.score != null ? String(report.score) : `${Math.round((report.geometryCoverage || 0) * 100)}%`;
+        row.append(main, score);
+        row.classList.toggle('active', modelFilter.value === report.name);
+        projectOverview.append(row);
+      }
+    }
+
+    function modelReportSummary(report) {
+      const geometry = `${Math.round((report.geometryCoverage || 0) * 100)}% geo`;
+      const elements = `${report.elements || 0} el`;
+      const runtime = modelReportRuntimeText(report);
+      return [elements, geometry, runtime].filter(Boolean).join(' · ');
+    }
+
+    function modelReportRuntimeText(report) {
+      const runtime = report.runtimeClasses || {};
+      const parts = [
+        runtime['linear-mep'] ? `stråk:${runtime['linear-mep']}` : '',
+        runtime['mep-node'] ? `noder:${runtime['mep-node']}` : '',
+        runtime['box-mep'] ? `box:${runtime['box-mep']}` : '',
+        runtime['surface-mesh'] ? `mesh:${runtime['surface-mesh']}` : ''
+      ].filter(Boolean);
+      return parts.join(', ');
+    }
+
+    function updateFinishOverview() {
+      finishOverview.innerHTML = '';
+      const counts = visibleMaterialFinishCounts();
+      const entries = Object.entries(counts)
+        .filter(([, value]) => Number(value) > 0)
+        .sort((a, b) => b[1] - a[1]);
+      if (!entries.length || selected) {
+        finishOverview.classList.add('hidden');
+        return;
+      }
+      finishOverview.classList.remove('hidden');
+      for (const [finish, count] of entries.slice(0, 8)) {
+        const chip = document.createElement('span');
+        chip.className = 'finish-chip';
+        chip.title = `${finishLabel(finish)}: ${count}`;
+        const swatch = document.createElement('span');
+        swatch.className = 'legend-swatch';
+        swatch.style.background = finishColor(finish);
+        const text = document.createElement('span');
+        text.textContent = `${finishLabel(finish)} ${count}`;
+        chip.append(swatch, text);
+        finishOverview.append(chip);
+      }
+    }
+
+    function visibleMaterialFinishCounts() {
+      if (!currentDoc) return {};
+      if (!hasActiveFilters()) return currentDoc.qualityReport?.summary?.materialFinishClasses || {};
+      const counts = {};
+      for (const mesh of drawables) {
+        if (!mesh.visible) continue;
+        const data = mesh.userData.vrifc || {};
+        const finish = data.finishClass || currentMaterialDefs.get(data.materialId)?.finishClass || 'generic';
+        const instances = data.instances?.length || 1;
+        counts[finish] = (counts[finish] || 0) + instances;
+      }
+      return counts;
+    }
+
+    function finishLabel(value) {
+      return ({
+        mep: 'MEP',
+        mineral: 'Mineral',
+        glass: 'Glas',
+        metal: 'Metall',
+        authored: 'IFC-färg',
+        generic: 'Generisk',
+        space: 'Rum',
+        wood: 'Trä'
+      })[value] || value;
+    }
+
+    function finishColor(value) {
+      return ({
+        mep: '#5bb8a8',
+        mineral: '#aeb9c8',
+        glass: '#67e8f9',
+        metal: '#64748b',
+        authored: '#c084fc',
+        generic: '#b7c6d8',
+        space: '#a78bfa',
+        wood: '#c08457'
+      })[value] || '#b7c6d8';
+    }
+
+    function activeModelReport() {
+      const value = modelFilter.value || 'all';
+      if (value === 'all') return null;
+      return (currentDoc?.qualityReport?.models || []).find((item) => item.name === value || item.sourceName === value) || null;
+    }
+
+    function formatCounts(counts) {
+      return Object.entries(counts || {})
+        .sort((a, b) => b[1] - a[1])
+        .map(([key, value]) => `${key}:${value}`)
+        .join(', ');
+    }
+
+    function formatBytes(bytes) {
+      const value = Number(bytes) || 0;
+      if (value >= 1024 * 1024) return `${(value / 1024 / 1024).toFixed(1)} MB`;
+      if (value >= 1024) return `${(value / 1024).toFixed(1)} KB`;
+      return `${value} B`;
+    }
+
+    function showWelcome() {
+      updateSpaceButton();
+      updateProps();
+      if (!window.isSecureContext) {
+        setStatus('VR-läge kräver secure context (HTTPS eller localhost). file:// kan visa modellen men brukar inte kunna starta WebXR.');
+      } else if (!('xr' in navigator)) {
+        setStatus('WebXR hittades inte i denna browser. Öppna sidan i Quest Browser för VR-test.');
+      }
+    }
+
+    function setStatus(message) {
+      statusEl.textContent = message;
+      updateDiagnosticsPanel(true);
+    }
+
+    function updateDiagnosticsPanel(force = false) {
+      if (!diagnostics) return;
+      const now = performance.now();
+      if (!force && now - lastDiagnosticUpdate < 1000) return;
+      lastDiagnosticUpdate = now;
+      const context = renderer.getContext();
+      const webglOk = Boolean(context) && !context.isContextLost();
+      const expectedBinary = pendingBinaryPackage ? expectedBinaryGeometryNames(pendingBinaryPackage.doc).join(', ') : '';
+      const secure = window.isSecureContext ? 'ja' : 'nej';
+      const xr = 'xr' in navigator ? 'ja' : 'nej';
+      const loaded = currentDoc ? `${currentDoc.project?.name || currentDoc.source?.name || 'modell'} (${currentDoc.elements?.length || 0} el)` : 'nej';
+      const presenting = renderer.xr.isPresenting ? 'ja' : 'nej';
+      const status = statusEl.textContent || '-';
+      diagnostics.innerHTML = `
+        <strong>VR-IFC diagnostik</strong>
+        <div>JS-modul: ok</div>
+        <div>Secure context: ${secure}</div>
+        <div>Navigator XR: ${xr}</div>
+        <div>XR-status: ${escapeHtml(xrState)}</div>
+        <div>XR presenting: ${presenting}</div>
+        <div>WebGL: ${webglOk ? 'ok' : '<span class="warn">tappad</span>'}</div>
+        <div>Frames: ${renderFrameCount}</div>
+        <div>Modell: ${escapeHtml(loaded)}</div>
+        <div>Drawables: ${drawables.length}</div>
+        ${deferredDetailMeshCount ? `<div>Defererad mesh: ${deferredDetailMeshCount} el / ${performanceBatches.length} batchar</div>` : ''}
+        ${pendingBinaryPackage ? `<div class="warn">Väntar på: ${escapeHtml(expectedBinary)}</div>` : ''}
+        <div>Status: ${escapeHtml(status)}</div>
+      `;
+      diagnostics.classList.toggle('hidden', Boolean(currentDoc) && renderFrameCount > 180 && webglOk && window.isSecureContext);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[char]);
+    }
+
+    async function withStatusError(work) {
+      try {
+        await work();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setStatus(`Fel: ${message}`);
+      }
+    }
+
+    function onResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      updatePerformancePixelRatio();
+    }
+  </script>
+</body>
+</html>

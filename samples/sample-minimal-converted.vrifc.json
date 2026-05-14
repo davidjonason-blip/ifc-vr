@@ -1,0 +1,500 @@
+{
+  "format": "vr-ifc",
+  "version": "0.0.1",
+  "generator": "VR-IFC Converter v0.0.1",
+  "units": "m",
+  "axis": "Y_UP",
+  "project": {
+    "name": "sample-minimal"
+  },
+  "source": {
+    "name": "sample-minimal.ifc",
+    "kind": "IFC",
+    "convertedAt": "2026-05-03T16:31:53.615Z"
+  },
+  "conversion": {
+    "geometryMode": "proxy-box",
+    "placementMode": "ifc-local-placement",
+    "sourceUnitScaleToMeters": 1,
+    "note": "v0.0.1 preserves IFC product identity and emits box proxies. When possible, box dimensions are derived from IFCEXTRUDEDAREASOLID rectangle/circle profiles. Real triangulated geometry export is planned for the next converter stage."
+  },
+  "materials": [
+    {
+      "id": "default",
+      "color": "#b7c6d8",
+      "roughness": 0.78
+    },
+    {
+      "id": "concrete",
+      "color": "#aeb9c8",
+      "roughness": 0.82
+    },
+    {
+      "id": "steel",
+      "color": "#64748b",
+      "roughness": 0.58
+    },
+    {
+      "id": "glass",
+      "color": "#67e8f9",
+      "roughness": 0.18,
+      "opacity": 0.42
+    },
+    {
+      "id": "door",
+      "color": "#c08457",
+      "roughness": 0.74
+    },
+    {
+      "id": "space",
+      "color": "#a78bfa",
+      "roughness": 0.8,
+      "opacity": 0.18
+    },
+    {
+      "id": "supply",
+      "color": "#38bdf8",
+      "roughness": 0.5
+    },
+    {
+      "id": "return",
+      "color": "#f59e0b",
+      "roughness": 0.5
+    }
+  ],
+  "geometries": [
+    {
+      "id": "proxy-wall",
+      "kind": "box",
+      "size": [
+        4.8,
+        2.8,
+        0.24
+      ]
+    },
+    {
+      "id": "proxy-slab",
+      "kind": "box",
+      "size": [
+        4.8,
+        0.28,
+        4.8
+      ]
+    },
+    {
+      "id": "proxy-column",
+      "kind": "box",
+      "size": [
+        0.36,
+        3,
+        0.36
+      ]
+    },
+    {
+      "id": "proxy-window",
+      "kind": "box",
+      "size": [
+        1.4,
+        1.2,
+        0.08
+      ]
+    },
+    {
+      "id": "proxy-door",
+      "kind": "box",
+      "size": [
+        1,
+        2.1,
+        0.12
+      ]
+    },
+    {
+      "id": "proxy-duct-long",
+      "kind": "box",
+      "size": [
+        3,
+        0.32,
+        0.32
+      ]
+    },
+    {
+      "id": "proxy-duct-fitting",
+      "kind": "box",
+      "size": [
+        0.7,
+        0.5,
+        0.7
+      ]
+    },
+    {
+      "id": "proxy-terminal",
+      "kind": "box",
+      "size": [
+        0.55,
+        0.2,
+        0.55
+      ]
+    },
+    {
+      "id": "proxy-space",
+      "kind": "box",
+      "size": [
+        3.2,
+        2.7,
+        3.2
+      ]
+    }
+  ],
+  "elements": [
+    {
+      "id": "ifc-10",
+      "type": "IFCWALL",
+      "name": "Yttervagg A",
+      "geometry": "proxy-wall",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 10,
+        "globalId": "2lYk7aSampleWall",
+        "placementId": 112
+      },
+      "properties": {
+        "ExpressId": "10",
+        "GlobalId": "2lYk7aSampleWall",
+        "IfcType": "IFCWALL",
+        "ObjectType": "Basic wall",
+        "Placement": "#112",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-11",
+      "type": "IFCWALLSTANDARDCASE",
+      "name": "Yttervagg B",
+      "geometry": "proxy-wall",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          0,
+          0,
+          -6
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 11,
+        "globalId": "2lYk7aSampleWallStd",
+        "placementId": 115
+      },
+      "properties": {
+        "ExpressId": "11",
+        "GlobalId": "2lYk7aSampleWallStd",
+        "IfcType": "IFCWALLSTANDARDCASE",
+        "ObjectType": "Basic wall",
+        "Placement": "#115",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-12",
+      "type": "IFCSLAB",
+      "name": "Bjalklag 01",
+      "geometry": "proxy-slab",
+      "material": "concrete",
+      "transform": {
+        "position": [
+          0,
+          0.1,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 12,
+        "globalId": "1sLABSample001",
+        "placementId": 139
+      },
+      "properties": {
+        "ExpressId": "12",
+        "GlobalId": "1sLABSample001",
+        "IfcType": "IFCSLAB",
+        "ObjectType": "Floor slab",
+        "Placement": "#139",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-13",
+      "type": "IFCCOLUMN",
+      "name": "Pelare A1",
+      "geometry": "proxy-column",
+      "material": "steel",
+      "transform": {
+        "position": [
+          -4,
+          0,
+          2
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 13,
+        "globalId": "3cOLSample001",
+        "placementId": 121
+      },
+      "properties": {
+        "ExpressId": "13",
+        "GlobalId": "3cOLSample001",
+        "IfcType": "IFCCOLUMN",
+        "ObjectType": "Steel column",
+        "Placement": "#121",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-14",
+      "type": "IFCWINDOW",
+      "name": "Fonster ost",
+      "geometry": "proxy-window",
+      "material": "glass",
+      "transform": {
+        "position": [
+          6,
+          1.2,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 14,
+        "globalId": "0wINSample001",
+        "placementId": 127
+      },
+      "properties": {
+        "ExpressId": "14",
+        "GlobalId": "0wINSample001",
+        "IfcType": "IFCWINDOW",
+        "ObjectType": "Window",
+        "Placement": "#127",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-15",
+      "type": "IFCDOOR",
+      "name": "Dorr entre",
+      "geometry": "proxy-door",
+      "material": "door",
+      "transform": {
+        "position": [
+          4,
+          0,
+          2
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 15,
+        "globalId": "0dOORSample001",
+        "placementId": 124
+      },
+      "properties": {
+        "ExpressId": "15",
+        "GlobalId": "0dOORSample001",
+        "IfcType": "IFCDOOR",
+        "ObjectType": "Door",
+        "Placement": "#124",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-16",
+      "type": "IFCDUCTSEGMENT",
+      "name": "Tilluft huvudkanal",
+      "geometry": "proxy-duct-long",
+      "material": "supply",
+      "transform": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 16,
+        "globalId": "1dUCTSample001",
+        "placementId": 128
+      },
+      "properties": {
+        "ExpressId": "16",
+        "GlobalId": "1dUCTSample001",
+        "IfcType": "IFCDUCTSEGMENT",
+        "ObjectType": "Supply air",
+        "Placement": "#128",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-17",
+      "type": "IFCDUCTFITTING",
+      "name": "Tilluft boj",
+      "geometry": "proxy-duct-fitting",
+      "material": "supply",
+      "transform": {
+        "position": [
+          -1,
+          2.6,
+          1.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 17,
+        "globalId": "1dUCTSample002",
+        "placementId": 130
+      },
+      "properties": {
+        "ExpressId": "17",
+        "GlobalId": "1dUCTSample002",
+        "IfcType": "IFCDUCTFITTING",
+        "ObjectType": "Supply fitting",
+        "Placement": "#130",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-18",
+      "type": "IFCFLOWTERMINAL",
+      "name": "Tilluftsdon",
+      "geometry": "proxy-terminal",
+      "material": "return",
+      "transform": {
+        "position": [
+          2,
+          2.6,
+          1.5
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 18,
+        "globalId": "1tERMSample001",
+        "placementId": 133
+      },
+      "properties": {
+        "ExpressId": "18",
+        "GlobalId": "1tERMSample001",
+        "IfcType": "IFCFLOWTERMINAL",
+        "ObjectType": "Terminal",
+        "Placement": "#133",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    },
+    {
+      "id": "ifc-19",
+      "type": "IFCSPACE",
+      "name": "Rum 101",
+      "geometry": "proxy-space",
+      "material": "space",
+      "transform": {
+        "position": [
+          0,
+          0,
+          -3
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ]
+      },
+      "source": {
+        "expressId": 19,
+        "globalId": "0sPACSample001",
+        "placementId": 118
+      },
+      "properties": {
+        "ExpressId": "19",
+        "GlobalId": "0sPACSample001",
+        "IfcType": "IFCSPACE",
+        "ObjectType": "Office",
+        "Placement": "#118",
+        "GeometrySource": "type-proxy",
+        "ShapeRepresentation": "-",
+        "Solid": "-",
+        "Profile": "-"
+      }
+    }
+  ]
+}

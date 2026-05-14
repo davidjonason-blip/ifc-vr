@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VR-IFC Converter v0.0.1</title>
+  <style>
+    :root {
+      --bg: #0a0d12;
+      --panel: #111722;
+      --panel-2: #161e2b;
+      --text: #edf2f7;
+      --muted: #9aa7b6;
+      --border: rgba(148, 163, 184, 0.24);
+      --accent: #38bdf8;
+      --ok: #34d399;
+      --warn: #f59e0b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(17, 23, 34, 0.92);
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .sub {
+      margin-top: 3px;
+      color: var(--muted);
+      font: 12px/1.35 "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button,
+    label.file-button {
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--panel-2);
+      color: var(--text);
+      padding: 0 12px;
+      font: 700 12px/1 Inter, system-ui, sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    button:hover,
+    label.file-button:hover {
+      border-color: rgba(56, 189, 248, 0.7);
+    }
+
+    button.primary {
+      background: rgba(56, 189, 248, 0.14);
+      border-color: rgba(56, 189, 248, 0.56);
+      color: #dff7ff;
+    }
+
+    button:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    input[type="file"] { display: none; }
+
+    .options {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .options-title {
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .check-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .check-row input {
+      margin-top: 1px;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+      gap: 14px;
+      padding: 14px;
+      min-height: 0;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 12px 13px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .panel-body {
+      padding: 13px;
+    }
+
+    .dropzone {
+      border: 1px dashed rgba(148, 163, 184, 0.36);
+      border-radius: 8px;
+      padding: 18px;
+      min-height: 148px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .dropzone.dragover {
+      border-color: rgba(56, 189, 248, 0.8);
+      background: rgba(56, 189, 248, 0.07);
+    }
+
+    .drop-title {
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .drop-copy {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .notice {
+      margin-top: 12px;
+      border: 1px solid rgba(245, 158, 11, 0.36);
+      border-radius: 8px;
+      padding: 10px;
+      color: #fed7aa;
+      background: rgba(245, 158, 11, 0.08);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 128px minmax(0, 1fr);
+      gap: 8px 12px;
+      font-size: 12px;
+    }
+
+    .k {
+      color: var(--muted);
+      font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .v {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .status {
+      margin-top: 12px;
+      color: var(--muted);
+      font: 12px/1.45 "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      min-height: 36px;
+    }
+
+    .file-list {
+      display: grid;
+      gap: 6px;
+      margin: 0 0 12px;
+    }
+
+    .file-list:empty {
+      display: none;
+    }
+
+    .file-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 7px 8px;
+      font-size: 12px;
+    }
+
+    .file-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-state {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font: 700 11px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .file-row.done .file-state { color: var(--ok); }
+    .file-row.error .file-state { color: #fca5a5; }
+
+    .preview {
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 0;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      min-height: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--panel-2);
+      color: var(--muted);
+      font: 700 11px/1.2 "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      z-index: 1;
+    }
+
+    td {
+      color: #dbe6f3;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      padding: 2px 7px;
+      font: 700 10px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+      color: var(--accent);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    @media (max-width: 860px) {
+      header {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .preview {
+        min-height: 420px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <h1>VR-IFC Converter</h1>
+        <div class="sub">v0.0.1 · IFC till .vrifc.json · standalone före VR</div>
+      </div>
+      <div class="actions">
+        <label class="file-button">
+          Öppna IFC
+          <input id="file-input" type="file" accept=".ifc,.txt" multiple>
+        </label>
+        <label class="file-button">
+          Öppna mapp
+          <input id="directory-input" type="file" accept=".ifc,.txt" webkitdirectory multiple>
+        </label>
+        <button id="sample-button">Sample IFC</button>
+        <button class="primary" id="download-button" disabled>Ladda ner VRIFC</button>
+        <button id="download-report-button" disabled>Ladda ner rapport</button>
+        <button id="open-viewer-button" disabled>Testöppna i VR-läsaren</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Konvertering</h2>
+          <span class="pill" id="mode-pill">proxy-box</span>
+        </div>
+        <div class="panel-body">
+          <div class="dropzone" id="dropzone">
+            <div class="drop-title">Dra in en eller flera IFC-filer</div>
+            <div class="drop-copy">Converteraren kan skapa en enskild VRIFC eller ett projektpaket med flera IFC-modeller, inklusive kvalitetsrapport per modell. VR-läsaröppningen är en testgenväg under utveckling.</div>
+          </div>
+
+          <div class="notice">v0.0.1 är nu ett konverteringskvalitetsläge: varje export innehåller en qualityReport med geometri-källor, fallback-orsaker, materialtäckning, bounds och varningar. Large-thin MEP får ett separat visuellt översiktslager när rå geometri annars blir för svårläst.</div>
+
+          <div class="options">
+            <div class="options-title">VR-säkert paket</div>
+            <label class="check-row">
+              <input id="include-spaces" type="checkbox" checked>
+              <span>Ta med IFCSPACE/rum i exporten.</span>
+            </label>
+            <label class="check-row">
+              <input id="exclude-extreme-bounds" type="checkbox" checked>
+              <span>Exkludera hela modeller med extrema bounds.</span>
+            </label>
+            <label class="check-row">
+              <input id="exclude-spatial-outliers" type="checkbox" checked>
+              <span>Exkludera objekt långt utanför huvudklustret.</span>
+            </label>
+          </div>
+
+          <div class="status" id="status">Redo.</div>
+
+          <div class="file-list" id="file-list"></div>
+
+          <div class="kv" id="stats"></div>
+        </div>
+      </section>
+
+      <section class="panel preview">
+        <div class="panel-head">
+          <h2>Elementförhandsvisning</h2>
+          <span class="pill" id="count-pill">0 element</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Typ</th>
+                <th>Namn</th>
+                <th>GlobalId</th>
+                <th>Material</th>
+              </tr>
+            </thead>
+            <tbody id="preview-body">
+              <tr><td colspan="4">Ingen IFC laddad.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./ifc-to-vrifc.js"></script>
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const directoryInput = document.getElementById('directory-input');
+    const sampleButton = document.getElementById('sample-button');
+    const downloadButton = document.getElementById('download-button');
+    const downloadReportButton = document.getElementById('download-report-button');
+    const openViewerButton = document.getElementById('open-viewer-button');
+    const includeSpacesInput = document.getElementById('include-spaces');
+    const excludeExtremeBoundsInput = document.getElementById('exclude-extreme-bounds');
+    const excludeSpatialOutliersInput = document.getElementById('exclude-spatial-outliers');
+    const dropzone = document.getElementById('dropzone');
+    const statusEl = document.getElementById('status');
+    const fileList = document.getElementById('file-list');
+    const statsEl = document.getElementById('stats');
+    const previewBody = document.getElementById('preview-body');
+    const countPill = document.getElementById('count-pill');
+
+    let currentDoc = null;
+    let currentName = 'model.vrifc.json';
+    let currentBlobUrl = null;
+    let currentReportName = 'model.report.json';
+    let currentReportBlobUrl = null;
+
+    fileInput.addEventListener('change', async (event) => {
+      const files = [...(event.target.files || [])];
+      if (!files.length) return;
+      await loadIfcFiles(files);
+      fileInput.value = '';
+    });
+
+    directoryInput.addEventListener('change', async (event) => {
+      const files = [...(event.target.files || [])];
+      if (!files.length) return;
+      await loadIfcFiles(files);
+      directoryInput.value = '';
+    });
+
+    sampleButton.addEventListener('click', loadSampleIfc);
+    downloadButton.addEventListener('click', downloadCurrent);
+    downloadReportButton.addEventListener('click', downloadReportCurrent);
+    openViewerButton.addEventListener('click', openViewerWithCurrent);
+
+    document.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+
+    document.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dragover');
+    });
+
+    document.addEventListener('drop', async (event) => {
+      event.preventDefault();
+      dropzone.classList.remove('dragover');
+      const files = [...(event.dataTransfer?.files || [])];
+      if (files.length) await loadIfcFiles(files);
+    });
+
+    async function loadIfcFiles(files) {
+      try {
+        const ifcFiles = sortIfcFiles(files.filter((file) => /\.(ifc|txt)$/i.test(file.name)));
+        if (!ifcFiles.length) throw new Error('Inga IFC-filer valda.');
+        renderFileList(ifcFiles.map((file) => ({ name: displayFileName(file), state: 'väntar' })));
+        if (ifcFiles.length === 1) {
+          await loadIfcFile(ifcFiles[0]);
+          return;
+        }
+        await convertPackageFiles(ifcFiles);
+      } catch (error) {
+        setStatus(`Fel: ${error.message || error}`);
+      }
+    }
+
+    async function loadIfcFile(file) {
+      setStatus(`Läser ${file.name}...`);
+      updateFileState(displayFileName(file), 'läser');
+      const text = await file.text();
+      updateFileState(displayFileName(file), 'konverterar');
+      convertText(text, displayFileName(file));
+      updateFileState(displayFileName(file), 'klar');
+    }
+
+    async function convertPackageFiles(files) {
+      const converted = [];
+      setStatus(`Konverterar ${files.length} IFC-filer till paket...`);
+      for (const file of files) {
+        updateFileState(displayFileName(file), 'läser');
+        const text = await file.text();
+        updateFileState(displayFileName(file), 'konverterar');
+        const result = window.VRIFCConverter.convertIfcTextToVRIFC(text, {
+          sourceName: displayFileName(file),
+          projectName: displayFileName(file).replace(/\.[^.]+$/, ''),
+          maxElements: 50000,
+          includeSpaces: includeSpacesInput.checked
+        });
+        converted.push({ name: displayFileName(file), doc: result.doc, stats: result.stats });
+        updateFileState(displayFileName(file), 'klar');
+      }
+
+      const projectName = packageNameForFiles(files);
+      currentDoc = window.VRIFCConverter.mergeVRIFCDocs(converted, {
+        projectName,
+        excludeExtremeBounds: excludeExtremeBoundsInput.checked,
+        excludeSpatialOutliers: excludeSpatialOutliersInput.checked
+      });
+      currentName = `${slugFileName(projectName)}.package.vrifc.json`;
+      currentReportName = `${slugFileName(projectName)}.package.report.json`;
+      refreshBlobUrl();
+      renderPackageStats(currentDoc, converted);
+      renderPreview(expandDocElements(currentDoc));
+      downloadButton.disabled = false;
+      downloadReportButton.disabled = false;
+      openViewerButton.disabled = false;
+      setStatus(`Paket klart: ${files.length} IFC-filer, ${currentDoc.qualityReport.summary.elements} element.`);
+    }
+
+    async function loadSampleIfc() {
+      try {
+        setStatus('Laddar sample IFC...');
+        const response = await fetch('./sample-minimal.ifc');
+        if (!response.ok) throw new Error(`Sample saknas (${response.status})`);
+        const text = await response.text();
+        convertText(text, 'sample-minimal.ifc');
+      } catch (error) {
+        setStatus(`Fel: ${error.message || error}`);
+      }
+    }
+
+    function convertText(text, sourceName) {
+      const result = window.VRIFCConverter.convertIfcTextToVRIFC(text, {
+        sourceName,
+        projectName: sourceName.replace(/\.[^.]+$/, ''),
+        maxElements: 50000,
+        includeSpaces: includeSpacesInput.checked
+      });
+
+      currentDoc = result.doc;
+      currentName = `${sourceName.replace(/\.[^.]+$/, '')}.vrifc.json`;
+      currentReportName = `${sourceName.replace(/\.[^.]+$/, '')}.report.json`;
+      refreshBlobUrl();
+      renderStats(result);
+      renderPreview(expandDocElements(currentDoc));
+      downloadButton.disabled = false;
+      downloadReportButton.disabled = false;
+      openViewerButton.disabled = false;
+      setStatus(`Konverterad: ${result.doc.qualityReport.summary.elements} element till ${currentName}.`);
+    }
+
+    function renderPackageStats(doc, converted) {
+      const entries = [
+        ['Paket', doc.project?.name || '-'],
+        ['IFC-filer', String(doc.qualityReport.summary.sourceFiles || converted.length)],
+        ['IFCSPACE', includeSpacesInput.checked ? 'Med' : `Exkluderad (${sumExcludedSpaces(converted)})`],
+        ['Model reports', String(doc.qualityReport.summary.modelReports || doc.qualityReport.models?.length || 0)],
+        ['Quality score', `${doc.qualityReport.summary.score} (${doc.qualityReport.summary.level})`],
+        ['VRIFC element', String(doc.qualityReport.summary.elements)],
+        ['Geometrier', String(doc.geometries.length)],
+        ['Material', String(doc.materials.length)],
+        ['Läge', doc.conversion.geometryMode],
+        ['Bounds', `${doc.bounds.size.join(' x ')} m`],
+        ['Linear MEP', String(doc.qualityReport.summary.linearMepRuntimeCount || 0)],
+        ['MEP noder', String(doc.qualityReport.summary.mepNodeRuntimeCount || 0)],
+        ['Box MEP', String(doc.qualityReport.summary.boxMepRuntimeCount || 0)],
+        ['Fallbacks', topTypes(doc.qualityReport.fallbackReasons)],
+        ['Varningar', formatWarnings(doc.qualityReport.warnings)]
+      ];
+      statsEl.innerHTML = '';
+      for (const [key, value] of entries) {
+        const k = document.createElement('div');
+        k.className = 'k';
+        k.textContent = key;
+        const v = document.createElement('div');
+        v.className = 'v';
+        v.textContent = value;
+        statsEl.append(k, v);
+      }
+    }
+
+    function renderStats(result) {
+      const entries = [
+        ['Källa', result.sourceName],
+        ['IFC entities', String(result.stats.entityCount)],
+        ['Produkter', String(result.stats.productCount)],
+        ['IFCSPACE', result.doc.conversion.includeSpaces === false ? `Exkluderad (${result.stats.excludedSpaceProducts || 0})` : 'Med'],
+        ['Placeringar', String(result.stats.placementCount)],
+        ['Rep-element', String(result.stats.representationCount)],
+        ['Quality score', `${result.stats.qualityScore} (${result.doc.qualityReport.summary.level})`],
+        ['Final geometri', `${Math.round(result.doc.qualityReport.summary.geometryCoverage * 100)}%`],
+        ['Overview fallback', String(result.doc.qualityReport.summary.overviewFallbackElements || 0)],
+        ['Visuell overlay', String(result.doc.qualityReport.summary.visualOverlayElements || 0)],
+        ['Fallbacks', topTypes(result.stats.fallbackReasons)],
+        ['Skippade orsaker', topTypes(result.doc.qualityReport.summary.skippedByReason)],
+        ['Varningar', formatWarnings(result.stats.qualityWarnings)],
+        ['VRIFC element', String(result.doc.qualityReport.summary.elements)],
+        ['Geometrier', String(result.doc.geometries.length)],
+        ['Material', String(result.doc.materials.length)],
+        ['Läge', result.doc.conversion.geometryMode],
+        ['Bounds', `${result.stats.runtimeBounds.size.join(' x ')} m`],
+        ['Medianstorlek', `${result.stats.medianElementMaxDim} m`],
+        ['IFC-färger', String(result.stats.styledColorCount)],
+        ['IFC material %', `${Math.round(result.doc.qualityReport.summary.styledMaterialCoverage * 100)}%`],
+        ['Visuell material %', `${Math.round((result.doc.qualityReport.summary.visualMaterialCoverage || 0) * 100)}%`],
+        ['Scene hint', result.doc.sceneHints.overview],
+        ['Visuell min-tjocklek', result.doc.sceneHints.visualMinThickness ? `${result.doc.sceneHints.visualMinThickness} m` : '-'],
+        ['Geometrikällor', topTypes(result.stats.geometrySources)],
+        ['Vanligaste typer', topTypes(result.stats.typeCounts)]
+      ];
+
+      statsEl.innerHTML = '';
+      for (const [key, value] of entries) {
+        const k = document.createElement('div');
+        k.className = 'k';
+        k.textContent = key;
+        const v = document.createElement('div');
+        v.className = 'v';
+        v.textContent = value;
+        statsEl.append(k, v);
+      }
+    }
+
+    function renderPreview(elements) {
+      countPill.textContent = `${elements.length} element`;
+      previewBody.innerHTML = '';
+
+      for (const element of elements.slice(0, 500)) {
+        const row = document.createElement('tr');
+        row.append(
+          cell(element.type),
+          cell(element.name),
+          cell(element.properties.GlobalId || '-'),
+          cell(element.material)
+        );
+        previewBody.append(row);
+      }
+
+      if (elements.length > 500) {
+        const row = document.createElement('tr');
+        row.append(cell(`Visar 500 av ${elements.length}`, 4));
+        previewBody.append(row);
+      }
+    }
+
+    function expandDocElements(doc) {
+      if (doc.elements?.length) return doc.elements;
+      return (doc.elementTable?.rows || []).slice(0, 500).map((row) => ({
+        type: row[1],
+        name: row[2],
+        material: row[4],
+        properties: {
+          GlobalId: row[8] || '-'
+        }
+      }));
+    }
+
+    function cell(text, span = 1) {
+      const td = document.createElement('td');
+      td.textContent = text;
+      if (span > 1) td.colSpan = span;
+      return td;
+    }
+
+    function topTypes(typeCounts) {
+      return Object.entries(typeCounts || {})
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([type, count]) => `${type}:${count}`)
+        .join(', ') || '-';
+    }
+
+    function sumExcludedSpaces(converted) {
+      return converted.reduce((sum, item) => sum + (item.doc.qualityReport?.summary?.excludedSpaceElements || 0), 0);
+    }
+
+    function formatWarnings(warnings) {
+      if (!warnings?.length) return '-';
+      return warnings
+        .map((warning) => `${warning.severity}:${warning.code}:${warning.count}`)
+        .join(', ');
+    }
+
+    function refreshBlobUrl() {
+      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+      const blob = new Blob([JSON.stringify(currentDoc)], { type: 'application/json' });
+      currentBlobUrl = URL.createObjectURL(blob);
+      if (currentReportBlobUrl) URL.revokeObjectURL(currentReportBlobUrl);
+      const reportBlob = new Blob([JSON.stringify(currentDoc.qualityReport, null, 2)], { type: 'application/json' });
+      currentReportBlobUrl = URL.createObjectURL(reportBlob);
+    }
+
+    function downloadCurrent() {
+      if (!currentDoc || !currentBlobUrl) return;
+      const link = document.createElement('a');
+      link.href = currentBlobUrl;
+      link.download = currentName;
+      link.click();
+    }
+
+    function downloadReportCurrent() {
+      if (!currentDoc || !currentReportBlobUrl) return;
+      const link = document.createElement('a');
+      link.href = currentReportBlobUrl;
+      link.download = currentReportName;
+      link.click();
+    }
+
+    function openViewerWithCurrent() {
+      if (!currentDoc || !currentBlobUrl) return;
+      window.open(`../index.html#load=${encodeURIComponent(currentBlobUrl)}`, '_blank');
+    }
+
+    function setStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function renderFileList(items) {
+      fileList.innerHTML = '';
+      for (const item of items) {
+        const row = document.createElement('div');
+        row.className = 'file-row';
+      row.dataset.name = item.name;
+        const name = document.createElement('span');
+        name.className = 'file-name';
+        name.textContent = item.name;
+        const state = document.createElement('span');
+        state.className = 'file-state';
+        state.textContent = item.state;
+        row.append(name, state);
+        fileList.append(row);
+      }
+    }
+
+    function updateFileState(name, state) {
+      const row = fileList.querySelector(`[data-name="${CSS.escape(name)}"]`);
+      if (!row) return;
+      row.classList.toggle('done', state === 'klar');
+      row.classList.toggle('error', state === 'fel');
+      const stateEl = row.querySelector('.file-state');
+      if (stateEl) stateEl.textContent = state;
+    }
+
+    function sortIfcFiles(files) {
+      return files.slice().sort((a, b) => displayFileName(a).localeCompare(displayFileName(b)));
+    }
+
+    function displayFileName(file) {
+      return file.webkitRelativePath || file.name;
+    }
+
+    function packageNameForFiles(files) {
+      if (files.length === 1) return files[0].name.replace(/\.[^.]+$/, '');
+      const base = files[0].name.replace(/\.[^.]+$/, '');
+      return `${base} + ${files.length - 1} modeller`;
+    }
+
+    function slugFileName(value) {
+      return String(value || 'project')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 64) || 'project';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+.scratch/
+node_modules/
+.DS_Store
+Thumbs.db
+
+# Local source IFC projects stay outside the deploy repository.
+*.ifc
+!converter/sample-minimal.ifc
+
+# Temporary browser/test output.
+*.tmp
+*.log
